@@ -82,6 +82,8 @@ whysynth_la_SOURCES = \
 	whysynth_voice_inline.h \
 	whysynth_voice_render.c
 
+plugin_DATA = manifest.ttl whysynth.ttl
+
 if DARWIN
 whysynth_la_CFLAGS = -DY_PLUGIN $(AM_CFLAGS) $(PLUGIN_CFLAGS) -DY_BOGUS_MLOCKALL
 whysynth_la_LIBADD = -lm -lmx $(PLUGIN_LIBS)

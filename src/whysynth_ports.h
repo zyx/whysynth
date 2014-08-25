@@ -333,6 +333,9 @@
 
 #define Y_MODS_COUNT    23
 
+/* the port index for the LV2 Control (MIDI) port */
+#define Y_LV2_CONTROL_PORT 198
+
 struct y_port_descriptor {
 
     LADSPA_PortDescriptor          port_descriptor;

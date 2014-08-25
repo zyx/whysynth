@@ -1,0 +1,1602 @@
+@prefix atom:  <http://lv2plug.in/ns/ext/atom#> .
+@prefix doap:  <http://usefulinc.com/ns/doap#> .
+@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
+
+
+<http://smbolton.com/whysynth>
+    a lv2:Plugin ;
+    doap:name "WhySynth" ;
+    doap:license <http://www.gnu.org/licenses/gpl-2.0.rdf> ;
+    lv2:requiredFeature urid:map ;
+    lv2:port [
+        a lv2:AudioPort ,
+          lv2:OutputPort ;
+        lv2:index 0 ;
+        lv2:symbol "outL" ;
+        lv2:name "Out Left"
+    ] , [
+        a lv2:AudioPort ,
+          lv2:OutputPort ;
+        lv2:index 1 ;
+        lv2:symbol "outR" ;
+        lv2:name "Out Right"
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 2 ;
+        lv2:symbol "osc1_mode" ;
+        lv2:name "Osc1 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 3 ;
+        lv2:symbol "osc1_waveform" ;
+        lv2:name "Osc1 Waveform" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 95.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 4 ;
+        lv2:symbol "osc1_pitch" ;
+        lv2:name "Osc1 Pitch" ;
+        lv2:minimum -36.0 ;
+        lv2:maximum 36.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 5 ;
+        lv2:symbol "osc1_detune" ;
+        lv2:name "Osc1 Detune" ;
+        lv2:minimum -0.5 ;
+        lv2:maximum 0.5 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 6 ;
+        lv2:symbol "osc1_pitch_mod_src" ;
+        lv2:name "Osc1 Pitch Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 7 ;
+        lv2:symbol "osc1_pitch_mod_amt" ;
+        lv2:name "Osc1 Pitch Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 8 ;
+        lv2:symbol "osc1_mparam_1" ;
+        lv2:name "Osc1 MParam 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 9 ;
+        lv2:symbol "osc1_mparam_2" ;
+        lv2:name "Osc1 MParam 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 10 ;
+        lv2:symbol "osc1_mmod_src" ;
+        lv2:name "Osc1 MMod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 30 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 11 ;
+        lv2:symbol "osc1_mmod_amt" ;
+        lv2:name "Osc1 MMod Amt" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 12 ;
+        lv2:symbol "osc1_amp_mod_src" ;
+        lv2:name "Osc1 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 13 ;
+        lv2:symbol "osc1_amp_mod_amt" ;
+        lv2:name "Osc1 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 14 ;
+        lv2:symbol "osc1_busa_level" ;
+        lv2:name "Osc1_BusA Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 15 ;
+        lv2:symbol "osc1_busb_level" ;
+        lv2:name "Osc1_BusB Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 16 ;
+        lv2:symbol "osc2_mode" ;
+        lv2:name "Osc2 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 17 ;
+        lv2:symbol "osc2_waveform" ;
+        lv2:name "Osc2 Waveform" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 95.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 18 ;
+        lv2:symbol "osc2_pitch" ;
+        lv2:name "Osc2 Pitch" ;
+        lv2:minimum -36.0 ;
+        lv2:maximum 36.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 19 ;
+        lv2:symbol "osc2_detune" ;
+        lv2:name "Osc2 Detune" ;
+        lv2:minimum -0.5 ;
+        lv2:maximum 0.5 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 20 ;
+        lv2:symbol "osc2_pitch_mod_src" ;
+        lv2:name "Osc2 Pitch Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 21 ;
+        lv2:symbol "osc2_pitch_mod_amt" ;
+        lv2:name "Osc2 Pitch Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 22 ;
+        lv2:symbol "osc2_mparam_1" ;
+        lv2:name "Osc2 MParam 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 23 ;
+        lv2:symbol "osc2_mparam_2" ;
+        lv2:name "Osc2 MParam 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 24 ;
+        lv2:symbol "osc2_mmod_src" ;
+        lv2:name "Osc2 MMod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 30 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 25 ;
+        lv2:symbol "osc2_mmod_amt" ;
+        lv2:name "Osc2 MMod Amt" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 26 ;
+        lv2:symbol "osc2_amp_mod_src" ;
+        lv2:name "Osc2 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 27 ;
+        lv2:symbol "osc2_amp_mod_amt" ;
+        lv2:name "Osc2 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 28 ;
+        lv2:symbol "osc2_busa_level" ;
+        lv2:name "Osc2_BusA Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 29 ;
+        lv2:symbol "osc2_busb_level" ;
+        lv2:name "Osc2_BusB Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 30 ;
+        lv2:symbol "osc3_mode" ;
+        lv2:name "Osc3 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 31 ;
+        lv2:symbol "osc3_waveform" ;
+        lv2:name "Osc3 Waveform" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 95.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 32 ;
+        lv2:symbol "osc3_pitch" ;
+        lv2:name "Osc3 Pitch" ;
+        lv2:minimum -36.0 ;
+        lv2:maximum 36.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 33 ;
+        lv2:symbol "osc3_detune" ;
+        lv2:name "Osc3 Detune" ;
+        lv2:minimum -0.5 ;
+        lv2:maximum 0.5 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 34 ;
+        lv2:symbol "osc3_pitch_mod_src" ;
+        lv2:name "Osc3 Pitch Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 35 ;
+        lv2:symbol "osc3_pitch_mod_amt" ;
+        lv2:name "Osc3 Pitch Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 36 ;
+        lv2:symbol "osc3_mparam_1" ;
+        lv2:name "Osc3 MParam 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 37 ;
+        lv2:symbol "osc3_mparam_2" ;
+        lv2:name "Osc3 MParam 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 38 ;
+        lv2:symbol "osc3_mmod_src" ;
+        lv2:name "Osc3 MMod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 30 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 39 ;
+        lv2:symbol "osc3_mmod_amt" ;
+        lv2:name "Osc3 MMod Amt" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 40 ;
+        lv2:symbol "osc3_amp_mod_src" ;
+        lv2:name "Osc3 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 41 ;
+        lv2:symbol "osc3_amp_mod_amt" ;
+        lv2:name "Osc3 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 42 ;
+        lv2:symbol "osc3_busa_level" ;
+        lv2:name "Osc3_BusA Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 43 ;
+        lv2:symbol "osc3_busb_level" ;
+        lv2:name "Osc3_BusB Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 44 ;
+        lv2:symbol "osc4_mode" ;
+        lv2:name "Osc4 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 45 ;
+        lv2:symbol "osc4_waveform" ;
+        lv2:name "Osc4 Waveform" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 95.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 46 ;
+        lv2:symbol "osc4_pitch" ;
+        lv2:name "Osc4 Pitch" ;
+        lv2:minimum -36.0 ;
+        lv2:maximum 36.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 47 ;
+        lv2:symbol "osc4_detune" ;
+        lv2:name "Osc4 Detune" ;
+        lv2:minimum -0.5 ;
+        lv2:maximum 0.5 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 48 ;
+        lv2:symbol "osc4_pitch_mod_src" ;
+        lv2:name "Osc4 Pitch Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 49 ;
+        lv2:symbol "osc4_pitch_mod_amt" ;
+        lv2:name "Osc4 Pitch Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 50 ;
+        lv2:symbol "osc4_mparam_1" ;
+        lv2:name "Osc4 MParam 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 51 ;
+        lv2:symbol "osc4_mparam_2" ;
+        lv2:name "Osc4 MParam 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 52 ;
+        lv2:symbol "osc4_mmod_src" ;
+        lv2:name "Osc4 MMod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 30 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 53 ;
+        lv2:symbol "osc4_mmod_amt" ;
+        lv2:name "Osc4 MMod Amt" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 54 ;
+        lv2:symbol "osc4_amp_mod_src" ;
+        lv2:name "Osc4 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 55 ;
+        lv2:symbol "osc4_amp_mod_amt" ;
+        lv2:name "Osc4 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 56 ;
+        lv2:symbol "osc4_busa_level" ;
+        lv2:name "Osc4_BusA Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 57 ;
+        lv2:symbol "osc4_busb_level" ;
+        lv2:name "Osc4_BusB Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 58 ;
+        lv2:symbol "filter1_mode" ;
+        lv2:name "Filter1 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 10 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 59 ;
+        lv2:symbol "filter1_source" ;
+        lv2:name "Filter1 Source" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 60 ;
+        lv2:symbol "filter1_frequency" ;
+        lv2:name "Filter1 Frequency" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 61 ;
+        lv2:symbol "filter1_frq_mod_src" ;
+        lv2:name "Filter1 Frq Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 62 ;
+        lv2:symbol "filter1_frq_mod_amt" ;
+        lv2:name "Filter1 Frq Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 63 ;
+        lv2:symbol "filter1_resonance" ;
+        lv2:name "Filter1 Resonance" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 64 ;
+        lv2:symbol "filter1_mparameter" ;
+        lv2:name "Filter1 MParameter" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 65 ;
+        lv2:symbol "filter2_mode" ;
+        lv2:name "Filter2 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 10 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 66 ;
+        lv2:symbol "filter2_source" ;
+        lv2:name "Filter2 Source" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 67 ;
+        lv2:symbol "filter2_frequency" ;
+        lv2:name "Filter2 Frequency" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 68 ;
+        lv2:symbol "filter2_frq_mod_src" ;
+        lv2:name "Filter2 Frq Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 69 ;
+        lv2:symbol "filter2_frq_mod_amt" ;
+        lv2:name "Filter2 Frq Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 70 ;
+        lv2:symbol "filter2_resonance" ;
+        lv2:name "Filter2 Resonance" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 71 ;
+        lv2:symbol "filter2_mparameter" ;
+        lv2:name "Filter2 MParameter" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 72 ;
+        lv2:symbol "busa_out_level" ;
+        lv2:name "BusA_Out Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 73 ;
+        lv2:symbol "busa_out_pan" ;
+        lv2:name "BusA_Out Pan" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 74 ;
+        lv2:symbol "busb_out_level" ;
+        lv2:name "BusB_Out Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 75 ;
+        lv2:symbol "busb_out_pan" ;
+        lv2:name "BusB_Out Pan" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 76 ;
+        lv2:symbol "filter1_out_level" ;
+        lv2:name "Filter1_Out Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 77 ;
+        lv2:symbol "filter1_out_pan" ;
+        lv2:name "Filter1_Out Pan" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 78 ;
+        lv2:symbol "filter2_out_level" ;
+        lv2:name "Filter2_Out Level" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 2.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 79 ;
+        lv2:symbol "filter2_out_pan" ;
+        lv2:name "Filter2_Out Pan" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 80 ;
+        lv2:symbol "volume" ;
+        lv2:name "Volume" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 81 ;
+        lv2:symbol "effect_mode" ;
+        lv2:name "Effect Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 3 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 82 ;
+        lv2:symbol "effect_param_1" ;
+        lv2:name "Effect Param 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 83 ;
+        lv2:symbol "effect_param_2" ;
+        lv2:name "Effect Param 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 84 ;
+        lv2:symbol "effect_param_3" ;
+        lv2:name "Effect Param 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 85 ;
+        lv2:symbol "effect_param_4" ;
+        lv2:name "Effect Param 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 86 ;
+        lv2:symbol "effect_param_5" ;
+        lv2:name "Effect Param 5" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 87 ;
+        lv2:symbol "effect_param_6" ;
+        lv2:name "Effect Param 6" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 88 ;
+        lv2:symbol "effect_wet_dry_mix" ;
+        lv2:name "Effect Wet/Dry Mix" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 89 ;
+        lv2:symbol "glide_rate" ;
+        lv2:name "Glide Rate" ;
+        lv2:minimum 0.002 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 90 ;
+        lv2:symbol "bend_range" ;
+        lv2:name "Bend Range" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 12.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 91 ;
+        lv2:symbol "glfo_frequency" ;
+        lv2:name "GLFO Frequency" ;
+        lv2:minimum 0.05 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 92 ;
+        lv2:symbol "glfo_waveform" ;
+        lv2:name "GLFO Waveform" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 95.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 93 ;
+        lv2:symbol "glfo_amp_mod_src" ;
+        lv2:name "GLFO Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 94 ;
+        lv2:symbol "glfo_amp_mod_amt" ;
+        lv2:name "GLFO Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 95 ;
+        lv2:symbol "vlfo_frequency" ;
+        lv2:name "VLFO Frequency" ;
+        lv2:minimum 0.05 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 96 ;
+        lv2:symbol "vlfo_waveform" ;
+        lv2:name "VLFO Waveform" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 95.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 97 ;
+        lv2:symbol "vlfo_delay" ;
+        lv2:name "VLFO Delay" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 10.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 98 ;
+        lv2:symbol "vlfo_amp_mod_src" ;
+        lv2:name "VLFO Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 99 ;
+        lv2:symbol "vlfo_amp_mod_amt" ;
+        lv2:name "VLFO Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 100 ;
+        lv2:symbol "mlfo_frequency" ;
+        lv2:name "MLFO Frequency" ;
+        lv2:minimum 0.05 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 101 ;
+        lv2:symbol "mlfo_waveform" ;
+        lv2:name "MLFO Waveform" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 95.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 102 ;
+        lv2:symbol "mlfo_delay" ;
+        lv2:name "MLFO Delay" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 10.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 103 ;
+        lv2:symbol "mlfo_amp_mod_src" ;
+        lv2:name "MLFO Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 104 ;
+        lv2:symbol "mlfo_amp_mod_amt" ;
+        lv2:name "MLFO Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 105 ;
+        lv2:symbol "mlfo_phase_spread" ;
+        lv2:name "MLFO Phase Spread" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 180.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 106 ;
+        lv2:symbol "mlfo_random_freq" ;
+        lv2:name "MLFO Random Freq" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 107 ;
+        lv2:symbol "ego_mode" ;
+        lv2:name "EGO Mode" ;
+        lv2:minimum 1.0 ;
+        lv2:maximum 5.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 108 ;
+        lv2:symbol "ego_shape_1" ;
+        lv2:name "EGO Shape 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 109 ;
+        lv2:symbol "ego_time_1" ;
+        lv2:name "EGO Time 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 110 ;
+        lv2:symbol "ego_level_1" ;
+        lv2:name "EGO Level 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 111 ;
+        lv2:symbol "ego_shape_2" ;
+        lv2:name "EGO Shape 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 112 ;
+        lv2:symbol "ego_time_2" ;
+        lv2:name "EGO Time 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 113 ;
+        lv2:symbol "ego_level_2" ;
+        lv2:name "EGO Level 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 114 ;
+        lv2:symbol "ego_shape_3" ;
+        lv2:name "EGO Shape 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 115 ;
+        lv2:symbol "ego_time_3" ;
+        lv2:name "EGO Time 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 116 ;
+        lv2:symbol "ego_level_3" ;
+        lv2:name "EGO Level 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 117 ;
+        lv2:symbol "ego_shape_4" ;
+        lv2:name "EGO Shape 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 118 ;
+        lv2:symbol "ego_time_4" ;
+        lv2:name "EGO Time 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 119 ;
+        lv2:symbol "ego_vel_level_sens" ;
+        lv2:name "EGO Vel Level Sens" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 120 ;
+        lv2:symbol "ego_vel_time_scale" ;
+        lv2:name "EGO Vel Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 121 ;
+        lv2:symbol "ego_kbd_time_scale" ;
+        lv2:name "EGO Kbd Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 122 ;
+        lv2:symbol "ego_amp_mod_src" ;
+        lv2:name "EGO Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 123 ;
+        lv2:symbol "ego_amp_mod_amt" ;
+        lv2:name "EGO Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 124 ;
+        lv2:symbol "eg1_mode" ;
+        lv2:name "EG1 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 5.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 125 ;
+        lv2:symbol "eg1_shape_1" ;
+        lv2:name "EG1 Shape 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 126 ;
+        lv2:symbol "eg1_time_1" ;
+        lv2:name "EG1 Time 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 127 ;
+        lv2:symbol "eg1_level_1" ;
+        lv2:name "EG1 Level 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 128 ;
+        lv2:symbol "eg1_shape_2" ;
+        lv2:name "EG1 Shape 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 129 ;
+        lv2:symbol "eg1_time_2" ;
+        lv2:name "EG1 Time 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 130 ;
+        lv2:symbol "eg1_level_2" ;
+        lv2:name "EG1 Level 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 131 ;
+        lv2:symbol "eg1_shape_3" ;
+        lv2:name "EG1 Shape 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 132 ;
+        lv2:symbol "eg1_time_3" ;
+        lv2:name "EG1 Time 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 133 ;
+        lv2:symbol "eg1_level_3" ;
+        lv2:name "EG1 Level 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 134 ;
+        lv2:symbol "eg1_shape_4" ;
+        lv2:name "EG1 Shape 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 135 ;
+        lv2:symbol "eg1_time_4" ;
+        lv2:name "EG1 Time 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 136 ;
+        lv2:symbol "eg1_vel_level_sens" ;
+        lv2:name "EG1 Vel Level Sens" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 137 ;
+        lv2:symbol "eg1_vel_time_scale" ;
+        lv2:name "EG1 Vel Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 138 ;
+        lv2:symbol "eg1_kbd_time_scale" ;
+        lv2:name "EG1 Kbd Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 139 ;
+        lv2:symbol "eg1_amp_mod_src" ;
+        lv2:name "EG1 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 140 ;
+        lv2:symbol "eg1_amp_mod_amt" ;
+        lv2:name "EG1 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 141 ;
+        lv2:symbol "eg2_mode" ;
+        lv2:name "EG2 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 5.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 142 ;
+        lv2:symbol "eg2_shape_1" ;
+        lv2:name "EG2 Shape 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 143 ;
+        lv2:symbol "eg2_time_1" ;
+        lv2:name "EG2 Time 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 144 ;
+        lv2:symbol "eg2_level_1" ;
+        lv2:name "EG2 Level 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 145 ;
+        lv2:symbol "eg2_shape_2" ;
+        lv2:name "EG2 Shape 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 146 ;
+        lv2:symbol "eg2_time_2" ;
+        lv2:name "EG2 Time 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 147 ;
+        lv2:symbol "eg2_level_2" ;
+        lv2:name "EG2 Level 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 148 ;
+        lv2:symbol "eg2_shape_3" ;
+        lv2:name "EG2 Shape 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 149 ;
+        lv2:symbol "eg2_time_3" ;
+        lv2:name "EG2 Time 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 150 ;
+        lv2:symbol "eg2_level_3" ;
+        lv2:name "EG2 Level 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 151 ;
+        lv2:symbol "eg2_shape_4" ;
+        lv2:name "EG2 Shape 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 152 ;
+        lv2:symbol "eg2_time_4" ;
+        lv2:name "EG2 Time 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 153 ;
+        lv2:symbol "eg2_vel_level_sens" ;
+        lv2:name "EG2 Vel Level Sens" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 154 ;
+        lv2:symbol "eg2_vel_time_scale" ;
+        lv2:name "EG2 Vel Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 155 ;
+        lv2:symbol "eg2_kbd_time_scale" ;
+        lv2:name "EG2 Kbd Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 156 ;
+        lv2:symbol "eg2_amp_mod_src" ;
+        lv2:name "EG2 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 157 ;
+        lv2:symbol "eg2_amp_mod_amt" ;
+        lv2:name "EG2 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 158 ;
+        lv2:symbol "eg3_mode" ;
+        lv2:name "EG3 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 5.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 159 ;
+        lv2:symbol "eg3_shape_1" ;
+        lv2:name "EG3 Shape 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 160 ;
+        lv2:symbol "eg3_time_1" ;
+        lv2:name "EG3 Time 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 161 ;
+        lv2:symbol "eg3_level_1" ;
+        lv2:name "EG3 Level 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 162 ;
+        lv2:symbol "eg3_shape_2" ;
+        lv2:name "EG3 Shape 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 163 ;
+        lv2:symbol "eg3_time_2" ;
+        lv2:name "EG3 Time 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 164 ;
+        lv2:symbol "eg3_level_2" ;
+        lv2:name "EG3 Level 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 165 ;
+        lv2:symbol "eg3_shape_3" ;
+        lv2:name "EG3 Shape 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 166 ;
+        lv2:symbol "eg3_time_3" ;
+        lv2:name "EG3 Time 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 167 ;
+        lv2:symbol "eg3_level_3" ;
+        lv2:name "EG3 Level 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 168 ;
+        lv2:symbol "eg3_shape_4" ;
+        lv2:name "EG3 Shape 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 169 ;
+        lv2:symbol "eg3_time_4" ;
+        lv2:name "EG3 Time 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 170 ;
+        lv2:symbol "eg3_vel_level_sens" ;
+        lv2:name "EG3 Vel Level Sens" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 171 ;
+        lv2:symbol "eg3_vel_time_scale" ;
+        lv2:name "EG3 Vel Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 172 ;
+        lv2:symbol "eg3_kbd_time_scale" ;
+        lv2:name "EG3 Kbd Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 173 ;
+        lv2:symbol "eg3_amp_mod_src" ;
+        lv2:name "EG3 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 174 ;
+        lv2:symbol "eg3_amp_mod_amt" ;
+        lv2:name "EG3 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 175 ;
+        lv2:symbol "eg4_mode" ;
+        lv2:name "EG4 Mode" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 5.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 176 ;
+        lv2:symbol "eg4_shape_1" ;
+        lv2:name "EG4 Shape 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 177 ;
+        lv2:symbol "eg4_time_1" ;
+        lv2:name "EG4 Time 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 178 ;
+        lv2:symbol "eg4_level_1" ;
+        lv2:name "EG4 Level 1" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 179 ;
+        lv2:symbol "eg4_shape_2" ;
+        lv2:name "EG4 Shape 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 180 ;
+        lv2:symbol "eg4_time_2" ;
+        lv2:name "EG4 Time 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 20.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 181 ;
+        lv2:symbol "eg4_level_2" ;
+        lv2:name "EG4 Level 2" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 182 ;
+        lv2:symbol "eg4_shape_3" ;
+        lv2:name "EG4 Shape 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 183 ;
+        lv2:symbol "eg4_time_3" ;
+        lv2:name "EG4 Time 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 184 ;
+        lv2:symbol "eg4_level_3" ;
+        lv2:name "EG4 Level 3" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 185 ;
+        lv2:symbol "eg4_shape_4" ;
+        lv2:name "EG4 Shape 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 11.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 186 ;
+        lv2:symbol "eg4_time_4" ;
+        lv2:name "EG4 Time 4" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 50.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 187 ;
+        lv2:symbol "eg4_vel_level_sens" ;
+        lv2:name "EG4 Vel Level Sens" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 188 ;
+        lv2:symbol "eg4_vel_time_scale" ;
+        lv2:name "EG4 Vel Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 189 ;
+        lv2:symbol "eg4_kbd_time_scale" ;
+        lv2:name "EG4 Kbd Time Scale" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 190 ;
+        lv2:symbol "eg4_amp_mod_src" ;
+        lv2:name "EG4 Amp Mod Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 191 ;
+        lv2:symbol "eg4_amp_mod_amt" ;
+        lv2:name "EG4 Amp Mod Amt" ;
+        lv2:minimum -1.0 ;
+        lv2:maximum 1.0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 192 ;
+        lv2:symbol "modmix_bias" ;
+        lv2:name "ModMix Bias" ;
+        lv2:minimum -1.4 ;
+        lv2:maximum 1.4 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 193 ;
+        lv2:symbol "modmix_mod1_src" ;
+        lv2:name "ModMix Mod1 Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 194 ;
+        lv2:symbol "modmix_mod1_amt" ;
+        lv2:name "ModMix Mod1 Amt" ;
+        lv2:minimum -1.4 ;
+        lv2:maximum 1.4 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 195 ;
+        lv2:symbol "modmix_mod2_src" ;
+        lv2:name "ModMix Mod2 Src" ;
+        lv2:minimum 0.0 ;
+        lv2:maximum 22 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 196 ;
+        lv2:symbol "modmix_mod2_amt" ;
+        lv2:name "ModMix Mod2 Amt" ;
+        lv2:minimum -1.4 ;
+        lv2:maximum 1.4 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 197 ;
+        lv2:symbol "tuning" ;
+        lv2:name "Tuning" ;
+        lv2:minimum 415.3 ;
+        lv2:maximum 466.2 ;
+    ] , [
+        a lv2:InputPort ,
+          atom:AtomPort ;
+        atom:bufferType atom:Sequence ;
+        atom:supports <http://lv2plug.in/ns/ext/midi#MidiEvent> ;
+        lv2:designation lv2:control ;
+        lv2:index 198 ;
+        lv2:symbol "control" ;
+        lv2:name "Control"
+    ] .

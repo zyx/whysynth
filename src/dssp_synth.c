@@ -37,6 +37,9 @@
 #include <ladspa.h>
 #include <dssi.h>
 
+#include "lv2/lv2plug.in/ns/ext/midi/midi.h"
+#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+
 #include "whysynth_types.h"
 #include "whysynth.h"
 #include "whysynth_ports.h"
@@ -53,6 +56,7 @@ y_global_t             global;
 
 static LADSPA_Descriptor *y_LADSPA_descriptor = NULL;
 static DSSI_Descriptor   *y_DSSI_descriptor = NULL;
+static LV2_Descriptor    *y_LV2_descriptor = NULL;
 
 static void y_cleanup(LADSPA_Handle instance);
 static void y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
@@ -79,13 +83,13 @@ dssp_voicelist_mutex_trylock(y_synth_t *synth)
     return 0;
 }
 
-inline int
+int
 dssp_voicelist_mutex_lock(y_synth_t *synth)
 {
     return pthread_mutex_lock(&synth->voicelist_mutex);
 }
 
-inline int
+int
 dssp_voicelist_mutex_unlock(y_synth_t *synth)
 {
     return pthread_mutex_unlock(&synth->voicelist_mutex);
@@ -776,11 +780,33 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
         if (!synth->control_remains)
             synth->control_remains = Y_CONTROL_PERIOD;
 
-        /* process any ready events */
+        /* process any ready DSSI events */
 	while (event_index < event_count
 	       && samples_done == events[event_index].time.tick) {
             y_handle_event(synth, &events[event_index]);
             event_index++;
+        }
+
+        /* process any ready LV2 events */
+        LV2_Atom_Event* event = lv2_atom_sequence_begin(&synth->control_port->body);
+        while (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
+               && event->time.frames == samples_done) {
+            if (event->body.type == synth->uris.midi_Event) {
+                const uint8_t* const msg = (const uint8_t*)(event + 1);
+                uint8_t note = msg[1];
+                uint8_t velocity = msg[2];
+                switch (lv2_midi_message_type(msg)) {
+                case LV2_MIDI_MSG_NOTE_ON:
+                    y_synth_note_on(synth, note, velocity);
+                    break;
+                case LV2_MIDI_MSG_NOTE_OFF:
+                    y_synth_note_off(synth, note, velocity);
+                    break;
+                default:
+                    break;
+                }
+            }
+            event = lv2_atom_sequence_next(event);
         }
 
         /* calculate the sample count (burst_size) for the next
@@ -798,11 +824,17 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
              * burst size to end when the cycle ends */
             burst_size = synth->control_remains;
         }
+
         if (event_index < event_count
             && events[event_index].time.tick - samples_done < burst_size) {
-            /* reduce burst size to end when next event is ready */
+            /* reduce burst size to end when next DSSI event is ready */
             burst_size = events[event_index].time.tick - samples_done;
+        } else if (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
+                   && event->time.frames - samples_done < burst_size ) {
+            /* reduce burst size to end when next LV2 event is ready */
+            burst_size = event->time.frames - samples_done;
         }
+
         if (sample_count - samples_done < burst_size) {
             /* reduce burst size to end at end of this run */
             burst_size = sample_count - samples_done;
@@ -829,6 +861,63 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
 //                             snd_seq_event_t *Events,
 //                             unsigned long    EventCount);
 
+
+/* ---- LV2 interface ---- */
+
+LV2_Handle
+y_LV2_instantiate(const struct _LV2_Descriptor * descriptor,
+                  double                         sample_rate,
+                  const char *                   bundle_path,
+                  const LV2_Feature *const *     features)
+{
+    y_synth_t *synth = (y_synth_t *)y_instantiate(NULL, (int)sample_rate);
+
+    for (int i = 0; features[i]; ++i)
+        if (!strcmp(features[i]->URI, LV2_URID__map))
+            synth->map = (LV2_URID_Map*)features[i]->data;
+
+    map_whysynth_uris(synth->map, &synth->uris);
+
+    return (LV2_Handle)synth;
+}
+
+void
+y_LV2_connect_port(LV2_Handle instance,
+                   uint32_t   port,
+                   void *     data_location)
+{
+    y_synth_t *synth = (y_synth_t *)instance;
+
+    if (port == Y_LV2_CONTROL_PORT)
+        synth->control_port = (const LV2_Atom_Sequence*)data_location;
+    else
+        y_connect_port((LADSPA_Handle*)instance, port, (LADSPA_Data*)data_location);
+}
+
+static void
+y_LV2_activate(LV2_Handle instance)
+{
+    y_activate((LADSPA_Handle)instance);
+}
+
+static void
+y_LV2_run(LV2_Handle instance, uint32_t sample_count)
+{
+    y_run_synth(instance, sample_count, NULL, 0);
+}
+
+static void
+y_LV2_deactivate(LV2_Handle instance)
+{
+    y_deactivate((LADSPA_Handle)instance);
+}
+
+static void
+y_LV2_cleanup(LV2_Handle instance)
+{
+    y_cleanup((LADSPA_Handle)instance);
+}
+
 /* ---- export ---- */
 
 const LADSPA_Descriptor *ladspa_descriptor(unsigned long index)
@@ -849,6 +938,17 @@ const DSSI_Descriptor *dssi_descriptor(unsigned long index)
     default:
         return NULL;
     }
+}
+
+LV2_SYMBOL_EXPORT
+const LV2_Descriptor* lv2_descriptor(uint32_t index)
+{
+	switch (index) {
+	case 0:
+		return y_LV2_descriptor;
+	default:
+		return NULL;
+	}
 }
 
 #ifdef __GNUC__
@@ -936,6 +1036,18 @@ void _init()
         y_DSSI_descriptor->run_multiple_synths = NULL;
         y_DSSI_descriptor->run_multiple_synths_adding = NULL;
     }
+
+    y_LV2_descriptor = (LV2_Descriptor *) malloc(sizeof(LV2_Descriptor));
+    if (y_LV2_descriptor) {
+        y_LV2_descriptor->URI = WHYSYNTH_URI;
+        y_LV2_descriptor->instantiate = y_LV2_instantiate;
+        y_LV2_descriptor->connect_port = y_LV2_connect_port;
+        y_LV2_descriptor->activate = y_LV2_activate;
+        y_LV2_descriptor->run = y_LV2_run;
+        y_LV2_descriptor->deactivate = y_LV2_deactivate;
+        y_LV2_descriptor->cleanup = y_LV2_cleanup;
+        y_LV2_descriptor->extension_data = NULL;
+    }
 }
 
 #ifdef __GNUC__
@@ -952,6 +1064,9 @@ void _fini()
     }
     if (y_DSSI_descriptor) {
         free(y_DSSI_descriptor);
+    }
+    if (y_LV2_descriptor) {
+        free(y_LV2_descriptor);
     }
 }
 
