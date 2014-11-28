@@ -3,13 +3,20 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix urid:  <http://lv2plug.in/ns/ext/urid#> .
+@prefix ui:    <http://lv2plug.in/ns/extensions/ui#> .
 
+
+<http://smbolton.com/whysynth#ui>
+	a ui:GtkUI ;
+	lv2:requiredFeature urid:map ;
+	lv2:extensionData ui:showInterface .
 
 <http://smbolton.com/whysynth>
     a lv2:Plugin ;
     doap:name "WhySynth" ;
     doap:license <http://www.gnu.org/licenses/gpl-2.0.rdf> ;
     lv2:requiredFeature urid:map ;
+    ui:ui <http://smbolton.com/whysynth#ui> ;
     lv2:port [
         a lv2:AudioPort ,
           lv2:OutputPort ;

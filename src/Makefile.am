@@ -39,7 +39,8 @@ WhySynth_gtk_SOURCES = \
 	whysynth_types.h \
 	whysynth_voice.h
 
-WhySynth_gtk_CFLAGS = -DY_GUI @GTK_CFLAGS@ $(AM_CFLAGS) $(GUI_CFLAGS)
+WhySynth_gtk_CFLAGS = -rdynamic -fpie -DY_GUI @GTK_CFLAGS@ $(AM_CFLAGS) $(GUI_CFLAGS)
+WhySynth_gtk_LDFLAGS = -pie
 
 if DARWIN
 WhySynth_gtk_LDADD = -lm -lmx @GTK_LIBS@ $(AM_LDFLAGS) $(GUI_LIBS)

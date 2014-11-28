@@ -27,6 +27,8 @@ extern GtkWidget *main_window;
 extern GtkObject *main_test_note_key_adj;
 extern GtkObject *main_test_note_velocity_adj;
 
+extern GtkWidget *notebook;
+
 extern GtkWidget *patches_clist;
 
 extern GtkWidget *about_window;
@@ -131,6 +133,15 @@ extern GQuark combo_value_quark;
 extern GQuark combo_combomodel_type_quark;
 
 void create_windows(const char *instance_tag);
+void create_edit_window (const char *tag);
+
+enum y_plugin_mode
+{
+    Y_DSSI,
+    Y_LV2
+};
+
+extern enum y_plugin_mode plugin_mode;
 
 #endif /* _GUI_INTERFACE_H */
 

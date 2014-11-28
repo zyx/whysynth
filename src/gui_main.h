@@ -29,6 +29,8 @@
 
 #include "whysynth_types.h"
 
+#include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
+
 extern char *     osc_host_url;
 extern char *     osc_self_url;
 extern lo_address osc_host_address;
@@ -50,6 +52,9 @@ extern char         patches_tmp_filename[];
 extern char        *project_directory;
 
 extern int last_configure_load_was_from_tmp;
+
+extern LV2UI_Write_Function lv2_write_function;
+extern LV2UI_Controller     lv2_controller;
 
 #endif /* _GUI_MAIN_H */
 

@@ -36,11 +36,22 @@
 #include <lo/lo.h>
 #include <dssi.h>
  
+#include "lv2/lv2plug.in/ns/ext/atom/atom.h"
+#include "lv2/lv2plug.in/ns/ext/atom/forge.h"
+#include "lv2/lv2plug.in/ns/ext/atom/util.h"
+#include "lv2/lv2plug.in/ns/ext/patch/patch.h"
+#include "lv2/lv2plug.in/ns/ext/urid/urid.h"
+#include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
+
+#include "./uris.h"
+
 #include "whysynth_types.h"
 #include "whysynth.h"
 #include "gui_callbacks.h"
 #include "gui_interface.h"
 #include "common_data.h"
+
+#define WHYSYNTH_UI_URI WHYSYNTH_URI "#ui"
 
 /* ==== global variables ==== */
 
@@ -69,6 +80,9 @@ int last_configure_load_was_from_tmp;
 
 int host_requested_quit = 0;
 int gui_test_mode = 0;
+
+LV2UI_Write_Function lv2_write_function;
+LV2UI_Controller     lv2_controller;
 
 /* ==== OSC handling ==== */
 
@@ -447,3 +461,69 @@ main(int argc, char *argv[])
     return 0;
 }
 
+static LV2UI_Handle
+instantiate(const LV2UI_Descriptor*   descriptor,
+            const char*               plugin_uri,
+            const char*               bundle_path,
+            LV2UI_Write_Function      write_function,
+            LV2UI_Controller          controller,
+            LV2UI_Widget*             widget,
+            const LV2_Feature* const* features)
+{
+    lv2_write_function = write_function;
+    lv2_controller = controller;
+    plugin_mode = Y_LV2;
+
+    update_port_wavetable_counts();
+    create_edit_window("WhySynth LV2");
+    *widget = notebook;
+
+    return (LV2UI_Handle)notebook;
+}
+
+
+static void
+cleanup(LV2UI_Handle handle)
+{
+    gtk_widget_destroy((GtkWidget*)handle);
+}
+
+static void
+port_event(LV2UI_Handle handle,
+           uint32_t     port_index,
+           uint32_t     buffer_size,
+           uint32_t     format,
+           const void*  buffer)
+{
+    // return early if the format isn't a single float
+    if (format != 0)
+        return;
+
+    // The tuning control isn't part of the controls inside the 
+    // notebook, so trying to update it when running in LV2
+    // mode with only the notebook available will just segfault.
+    if (port_index == Y_PORT_TUNING)
+        return;
+
+    update_voice_widget(port_index, *(float*)buffer, FALSE);
+}
+
+static const LV2UI_Descriptor descriptor = {
+	WHYSYNTH_UI_URI,
+	instantiate,
+	cleanup,
+	port_event,
+	NULL
+};
+
+LV2_SYMBOL_EXPORT
+const LV2UI_Descriptor*
+lv2ui_descriptor(uint32_t index)
+{
+	switch (index) {
+	case 0:
+		return &descriptor;
+	default:
+		return NULL;
+	}
+}

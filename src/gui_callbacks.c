@@ -475,7 +475,10 @@ on_voice_knob_change( GtkWidget *widget, gpointer data )
     GDB_MESSAGE(GDB_GUI, " on_voice_knob_change: knob %d changed to %10.6f => %10.6f\n",
             index, GTK_ADJUSTMENT(widget)->value, value);
 
-    lo_send(osc_host_address, osc_control_path, "if", index, value);
+    if (plugin_mode == Y_DSSI)
+        lo_send(osc_host_address, osc_control_path, "if", index, value);
+    else if (plugin_mode == Y_LV2)
+        lv2_write_function(lv2_controller, index, sizeof(float), 0, &value);
 }
 
 void
@@ -543,7 +546,13 @@ on_voice_detent_change( GtkWidget *widget, gpointer data )
     GDB_MESSAGE(GDB_GUI, " on_voice_detent_change: detent %d changed to %d\n",
             index, value);
 
-    lo_send(osc_host_address, osc_control_path, "if", index, (float)value);
+    if (plugin_mode == Y_DSSI)
+        lo_send(osc_host_address, osc_control_path, "if", index, (float)value);
+    else if (plugin_mode == Y_LV2)
+    {
+        float floatValue = (float)value;
+        lv2_write_function(lv2_controller, index, sizeof(float), 0, &floatValue);
+    }
 }
 
 void
@@ -555,7 +564,13 @@ on_voice_onoff_toggled( GtkWidget *widget, gpointer data )
     GDB_MESSAGE(GDB_GUI, " on_voice_onoff_toggled: button %d changed to %s\n",
                 index, (state ? "on" : "off"));
 
-    lo_send(osc_host_address, osc_control_path, "if", index, (state ? 1.0f : 0.0f));
+    if (plugin_mode == Y_DSSI)
+        lo_send(osc_host_address, osc_control_path, "if", index, (state ? 1.0f : 0.0f));
+    else if (plugin_mode == Y_LV2)
+    {
+        float value = state? 1.0f : 0.0f;
+        lv2_write_function(lv2_controller, index, sizeof(float), 0, &value);
+    }
 }
 
 void
@@ -576,7 +591,13 @@ on_voice_combo_change( GtkWidget *widget, gpointer data )
 
     GDB_MESSAGE(GDB_GUI, " on_voice_combo_change: combo %d changed to %d\n", index, value);
 
-    lo_send(osc_host_address, osc_control_path, "if", index, (float)value);
+    if (plugin_mode == Y_DSSI)
+        lo_send(osc_host_address, osc_control_path, "if", index, (float)value);
+    else if (plugin_mode == Y_LV2)
+    {
+        float floatValue = (float)value;
+        lv2_write_function(lv2_controller, index, sizeof(float), 0, &floatValue);
+    }
 
     check_for_layout_update_on_port_change(index);
 }
@@ -1547,7 +1568,12 @@ update_voice_widget(int port, float value, int send_OSC)
 
     /* if requested, send update to DSSI host */
     if (send_OSC)
-        lo_send(osc_host_address, osc_control_path, "if", port, value);
+    {
+        if (plugin_mode == Y_DSSI)
+            lo_send(osc_host_address, osc_control_path, "if", port, value);
+        else if (plugin_mode == Y_LV2)
+            lv2_write_function(lv2_controller, port, sizeof(float), 0, &value);
+    }
 }
 
 void
