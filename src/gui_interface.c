@@ -91,8 +91,6 @@ GtkWidget *monophonic_option_menu;
 GtkWidget *glide_option_menu;
 GtkWidget *program_cancel_button;
 
-struct voice_widgets voice_widgets[Y_PORTS_COUNT];
-
 GtkTreeStore *combomodel[Y_COMBOMODEL_TYPE_COUNT];
 GQuark combomodel_id_to_path_quark;
 
@@ -119,7 +117,7 @@ set_window_title(GtkWidget *window, const char *tag, const char *text)
 }
 
 void
-create_main_window (const char *tag)
+create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
 {
     GtkWidget *vbox1;
     GtkWidget *menubar1;
@@ -654,7 +652,7 @@ create_main_window (const char *tag)
                         NULL);
     gtk_signal_connect(GTK_OBJECT(patches_clist), "select_row",
                        GTK_SIGNAL_FUNC(on_patches_selection),
-                       NULL);
+                       callback_data);
 
     /* connect test note widgets */
     gtk_signal_connect (GTK_OBJECT (main_test_note_key_adj),
@@ -1561,10 +1559,12 @@ void
 create_edit_place_knob_in_table(int port,
                                 char *toptext, char *ltext, char *rtext,
                                 GtkWidget *window, GtkWidget *table,
-                                int x0, int x1, int y0, int y1)
+                                int x0, int x1, int y0, int y1,
+                                struct y_ui_callback_data_t* callback_data)
 {
     struct y_port_descriptor *ypd = &y_port_description[port];
     GtkWidget *wframe, *wtable, *wlabel, *widget;
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
 
     wframe = gtk_frame_new (NULL);
     gtk_widget_ref (wframe);
@@ -1616,7 +1616,7 @@ create_edit_place_knob_in_table(int port,
                               (GtkAttachOptions) (0), 0, 0);
     gtk_signal_connect (GTK_OBJECT (voice_widgets[port].adjustment), "value_changed",
                         GTK_SIGNAL_FUNC (on_voice_knob_change),
-                        (gpointer)port);
+                        (gpointer)&callback_data[port]);
 
     if (ypd->type == Y_PORT_TYPE_BPLOGSCALED ||
         (ypd->type == Y_PORT_TYPE_LINEAR && ypd->lower_bound < 0.0f && ypd->upper_bound > 0.0f) ||
@@ -1631,7 +1631,7 @@ create_edit_place_knob_in_table(int port,
                           (GtkAttachOptions) (0), 0, 0);
         gtk_signal_connect (GTK_OBJECT (widget), "pressed",
                             GTK_SIGNAL_FUNC (on_voice_knob_zero),
-                            (gpointer)port);
+                            (gpointer)&callback_data[port]);
     }
 
     if (ltext == NULL || *ltext != '\0') { /* Place left value label, unless ltext points to empty string */
@@ -1680,10 +1680,12 @@ create_edit_place_knob_in_table(int port,
 void
 create_edit_place_detent_in_table(int port, char *toptext,
                                   GtkWidget *window, GtkWidget *table,
-                                  int x0, int x1, int y0, int y1)
+                                  int x0, int x1, int y0, int y1,
+                                  struct y_ui_callback_data_t* callback_data)
 {
     struct y_port_descriptor *ypd = &y_port_description[port];
     GtkWidget *wframe, *wvbox, *wlabel, *widget;
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
 
     wframe = gtk_frame_new (NULL);
     gtk_widget_ref (wframe);
@@ -1729,15 +1731,17 @@ create_edit_place_detent_in_table(int port, char *toptext,
     gtk_box_pack_start (GTK_BOX (wvbox), widget, FALSE, FALSE, 0);
     gtk_signal_connect (GTK_OBJECT (voice_widgets[port].adjustment), "value_changed",
                         GTK_SIGNAL_FUNC (on_voice_detent_change),
-                        (gpointer)port);
+                        (gpointer)&callback_data[port]);
 }
 
 void
 create_edit_place_combo_in_table(int port, char *toptext, int combomodel_type,
                                  GtkWidget *table,
-                                 int x0, int x1, int y0, int y1)
+                                 int x0, int x1, int y0, int y1,
+                                 struct y_ui_callback_data_t* callback_data)
 {
     GtkWidget *wframe, *wvbox, *wlabel, *wcombo;
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
 
     wframe = gtk_frame_new (NULL);
     gtk_widget_show (wframe);
@@ -1770,13 +1774,14 @@ create_edit_place_combo_in_table(int port, char *toptext, int combomodel_type,
     voice_widgets[port].widget = wcombo;
     gtk_widget_show(wcombo);
     gtk_box_pack_start (GTK_BOX(wvbox), wcombo, FALSE, FALSE, 0);
-    g_signal_connect(G_OBJECT(wcombo), "changed", G_CALLBACK(on_voice_combo_change), (gpointer)port);
+    g_signal_connect(G_OBJECT(wcombo), "changed", G_CALLBACK(on_voice_combo_change), (gpointer)&callback_data[port]);
 }
 
 void
 create_edit_place_copy_paste_buttons(int port,
                                      GtkWidget *window, GtkWidget *table,
-                                     int x0, int x1, int y0, int y1)
+                                     int x0, int x1, int y0, int y1,
+                                     struct y_ui_callback_data_t* callback_data)
 {
     GtkWidget *vbox;
     GtkWidget *copy_button;
@@ -1800,7 +1805,7 @@ create_edit_place_copy_paste_buttons(int port,
     gtk_box_pack_start (GTK_BOX (vbox), copy_button, TRUE, FALSE, 0);
     gtk_signal_connect (GTK_OBJECT (copy_button), "clicked",
                         GTK_SIGNAL_FUNC (on_voice_element_copy),
-                        (gpointer)port);
+                        (gpointer)&callback_data[port]);
 
     paste_button = gtk_button_new_with_label ("Paste");
     gtk_widget_ref (paste_button);
@@ -1810,14 +1815,40 @@ create_edit_place_copy_paste_buttons(int port,
     gtk_box_pack_start (GTK_BOX (vbox), paste_button, TRUE, FALSE, 0);
     gtk_signal_connect (GTK_OBJECT (paste_button), "clicked",
                         GTK_SIGNAL_FUNC (on_voice_element_paste),
-                        (gpointer)port);
+                        (gpointer)&callback_data[port]);
 }
 
+// Initialize an array of y_ui_callback_data_t structs. indexes are simply
+// assigned sequentially from 0 to Y_PORTS_COUNT, all voice_widgets pointers
+// point to a single voice_widgets array, given by the voice_widgets argument.
+void initialize_callback_data(struct y_ui_callback_data_t* callback_data, struct voice_widgets* voice_widgets)
+{
+    for (int i = 0; i < Y_PORTS_COUNT; ++i) {
+        callback_data[i].index = i;
+        callback_data[i].voice_widgets = voice_widgets;
+    }
+}
+
+void set_lv2_write_function(struct y_ui_callback_data_t* callback_data, LV2UI_Write_Function function)
+{
+    for (int i = 0; i < Y_PORTS_COUNT; ++i) {
+        callback_data[i].lv2_write_function = function;
+    }
+}
+
+void set_lv2_controller(struct y_ui_callback_data_t* callback_data, LV2UI_Controller controller)
+{
+    for (int i = 0; i < Y_PORTS_COUNT; ++i) {
+        callback_data[i].lv2_controller = controller;
+    }
+}
+
+
 void
-create_edit_window (const char *tag)
+create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
 {
     int port;
-    GtkWidget *vbox;
+    GtkWidget *vbox = NULL;
     GtkWidget *hbox;
     GtkWidget *name_label;
     GtkWidget *comment_label;
@@ -1846,10 +1877,14 @@ create_edit_window (const char *tag)
     GtkWidget *test_note_mode_button;
     GtkWidget *edit_save_changes;
     GtkWidget *edit_close;
-    GtkWidget *top_level_widget;
+    GtkWidget *top_level_widget = NULL;
 
     /* create combo models */
     create_edit_combo_models();
+
+    struct voice_widgets* voice_widgets = malloc(sizeof(struct voice_widgets) * Y_PORTS_COUNT);
+
+    initialize_callback_data(callback_data, voice_widgets);
 
     if (plugin_mode == Y_DSSI)
     {
@@ -1951,130 +1986,190 @@ create_edit_window (const char *tag)
     /* oscillator 1 */
     osc1_table = create_edit_tab_and_table("Osc1", 6, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Oscillator 1\n'Osc1'",                top_level_widget, osc1_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_OSC1_MODE,                  top_level_widget, osc1_table, 0, 1, 2, 3);
+    create_edit_place_copy_paste_buttons(Y_PORT_OSC1_MODE,                  top_level_widget, osc1_table, 0, 1, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC1_MODE, "Mode", Y_COMBOMODEL_TYPE_OSC_MODE,
-                                                                            osc1_table, 1, 2, 0, 1);
-    create_edit_place_detent_in_table(Y_PORT_OSC1_PITCH,    "Pitch",        top_level_widget, osc1_table, 2, 3, 0, 1);
+                                                                            osc1_table, 1, 2, 0, 1,
+                                                                            callback_data);
+    create_edit_place_detent_in_table(Y_PORT_OSC1_PITCH,    "Pitch",        top_level_widget, osc1_table, 2, 3, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_DETUNE, "Detune", "-50", "+50",
-                                                                            top_level_widget, osc1_table, 3, 4, 0, 1);
+                                                                            top_level_widget, osc1_table, 3, 4, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC1_PITCH_MOD_SRC, "Pitch Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc1_table, 4, 5, 0, 1);
+                                                                            osc1_table, 4, 5, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_PITCH_MOD_AMT, "Pitch Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc1_table, 5, 6, 0, 1);
+                                                                            top_level_widget, osc1_table, 5, 6, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC1_WAVEFORM, "Waveform", Y_COMBOMODEL_TYPE_WAVETABLE,
-                                                                            osc1_table, 1, 2, 1, 2);
+                                                                            osc1_table, 1, 2, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_MPARAM1, "MParam1", NULL, NULL,
-                                                                            top_level_widget, osc1_table, 2, 3, 1, 2);
+                                                                            top_level_widget, osc1_table, 2, 3, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_MPARAM2, "MParam2", NULL, NULL,
-                                                                            top_level_widget, osc1_table, 3, 4, 1, 2);
+                                                                            top_level_widget, osc1_table, 3, 4, 1, 2,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC1_MMOD_SRC, "MMod Source", Y_COMBOMODEL_TYPE_GRAIN_ENV,
-                                                                            osc1_table, 4, 5, 1, 2);
+                                                                            osc1_table, 4, 5, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_MMOD_AMT, "MMod Amount", NULL, NULL,
-                                                                            top_level_widget, osc1_table, 5, 6, 1, 2);
+                                                                            top_level_widget, osc1_table, 5, 6, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_LEVEL_A, "BusA Send Level", NULL, NULL,
-                                                                            top_level_widget, osc1_table, 2, 3, 2, 3);
+                                                                            top_level_widget, osc1_table, 2, 3, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_LEVEL_B, "BusB Send Level", NULL, NULL,
-                                                                            top_level_widget, osc1_table, 3, 4, 2, 3);
+                                                                            top_level_widget, osc1_table, 3, 4, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC1_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc1_table, 4, 5, 2, 3);
+                                                                            osc1_table, 4, 5, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC1_AMP_MOD_AMT, "Amp Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc1_table, 5, 6, 2, 3);
+                                                                            top_level_widget, osc1_table, 5, 6, 2, 3,
+                                                                            callback_data);
 
     /* oscillator 2 */
     osc2_table = create_edit_tab_and_table("Osc2", 6, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Oscillator 2\n'Osc2'",                top_level_widget, osc2_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_OSC2_MODE,                  top_level_widget, osc2_table, 0, 1, 2, 3);
+    create_edit_place_copy_paste_buttons(Y_PORT_OSC2_MODE,                  top_level_widget, osc2_table, 0, 1, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC2_MODE, "Mode", Y_COMBOMODEL_TYPE_OSC_MODE,
-                                                                            osc2_table, 1, 2, 0, 1);
-    create_edit_place_detent_in_table(Y_PORT_OSC2_PITCH,    "Pitch",        top_level_widget, osc2_table, 2, 3, 0, 1);
+                                                                            osc2_table, 1, 2, 0, 1,
+                                                                            callback_data);
+    create_edit_place_detent_in_table(Y_PORT_OSC2_PITCH,    "Pitch",        top_level_widget, osc2_table, 2, 3, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_DETUNE, "Detune", "-50", "+50",
-                                                                            top_level_widget, osc2_table, 3, 4, 0, 1);
+                                                                            top_level_widget, osc2_table, 3, 4, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC2_PITCH_MOD_SRC, "Pitch Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc2_table, 4, 5, 0, 1);
+                                                                            osc2_table, 4, 5, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_PITCH_MOD_AMT, "Pitch Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc2_table, 5, 6, 0, 1);
+                                                                            top_level_widget, osc2_table, 5, 6, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC2_WAVEFORM, "Waveform", Y_COMBOMODEL_TYPE_WAVETABLE,
-                                                                            osc2_table, 1, 2, 1, 2);
+                                                                            osc2_table, 1, 2, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_MPARAM1, "MParam1", NULL, NULL,
-                                                                            top_level_widget, osc2_table, 2, 3, 1, 2);
+                                                                            top_level_widget, osc2_table, 2, 3, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_MPARAM2, "MParam2", NULL, NULL,
-                                                                            top_level_widget, osc2_table, 3, 4, 1, 2);
+                                                                            top_level_widget, osc2_table, 3, 4, 1, 2,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC2_MMOD_SRC, "MMod Source", Y_COMBOMODEL_TYPE_GRAIN_ENV,
-                                                                            osc2_table, 4, 5, 1, 2);
+                                                                            osc2_table, 4, 5, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_MMOD_AMT, "MMod Amount", NULL, NULL,
-                                                                            top_level_widget, osc2_table, 5, 6, 1, 2);
+                                                                            top_level_widget, osc2_table, 5, 6, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_LEVEL_A, "BusA Send Level", NULL, NULL,
-                                                                            top_level_widget, osc2_table, 2, 3, 2, 3);
+                                                                            top_level_widget, osc2_table, 2, 3, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_LEVEL_B, "BusB Send Level", NULL, NULL,
-                                                                            top_level_widget, osc2_table, 3, 4, 2, 3);
+                                                                            top_level_widget, osc2_table, 3, 4, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC2_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc2_table, 4, 5, 2, 3);
+                                                                            osc2_table, 4, 5, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC2_AMP_MOD_AMT, "Amp Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc2_table, 5, 6, 2, 3);
+                                                                            top_level_widget, osc2_table, 5, 6, 2, 3,
+                                                                            callback_data);
 
     /* oscillator 3 */
     osc3_table = create_edit_tab_and_table("Osc3", 6, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Oscillator 3\n'Osc3'",                top_level_widget, osc3_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_OSC3_MODE,                  top_level_widget, osc3_table, 0, 1, 2, 3);
+    create_edit_place_copy_paste_buttons(Y_PORT_OSC3_MODE,                  top_level_widget, osc3_table, 0, 1, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC3_MODE, "Mode", Y_COMBOMODEL_TYPE_OSC_MODE,
-                                                                            osc3_table, 1, 2, 0, 1);
-    create_edit_place_detent_in_table(Y_PORT_OSC3_PITCH,    "Pitch",        top_level_widget, osc3_table, 2, 3, 0, 1);
+                                                                            osc3_table, 1, 2, 0, 1,
+                                                                            callback_data);
+    create_edit_place_detent_in_table(Y_PORT_OSC3_PITCH,    "Pitch",        top_level_widget, osc3_table, 2, 3, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_DETUNE, "Detune", "-50", "+50",
-                                                                            top_level_widget, osc3_table, 3, 4, 0, 1);
+                                                                            top_level_widget, osc3_table, 3, 4, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC3_PITCH_MOD_SRC, "Pitch Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc3_table, 4, 5, 0, 1);
+                                                                            osc3_table, 4, 5, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_PITCH_MOD_AMT, "Pitch Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc3_table, 5, 6, 0, 1);
+                                                                            top_level_widget, osc3_table, 5, 6, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC3_WAVEFORM, "Waveform", Y_COMBOMODEL_TYPE_WAVETABLE,
-                                                                            osc3_table, 1, 2, 1, 2);
+                                                                            osc3_table, 1, 2, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_MPARAM1, "MParam1", NULL, NULL,
-                                                                            top_level_widget, osc3_table, 2, 3, 1, 2);
+                                                                            top_level_widget, osc3_table, 2, 3, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_MPARAM2, "MParam2", NULL, NULL,
-                                                                            top_level_widget, osc3_table, 3, 4, 1, 2);
+                                                                            top_level_widget, osc3_table, 3, 4, 1, 2,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC3_MMOD_SRC, "MMod Source", Y_COMBOMODEL_TYPE_GRAIN_ENV,
-                                                                            osc3_table, 4, 5, 1, 2);
+                                                                            osc3_table, 4, 5, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_MMOD_AMT, "MMod Amount", NULL, NULL,
-                                                                            top_level_widget, osc3_table, 5, 6, 1, 2);
+                                                                            top_level_widget, osc3_table, 5, 6, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_LEVEL_A, "BusA Send Level", NULL, NULL,
-                                                                            top_level_widget, osc3_table, 2, 3, 2, 3);
+                                                                            top_level_widget, osc3_table, 2, 3, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_LEVEL_B, "BusB Send Level", NULL, NULL,
-                                                                            top_level_widget, osc3_table, 3, 4, 2, 3);
+                                                                            top_level_widget, osc3_table, 3, 4, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC3_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc3_table, 4, 5, 2, 3);
+                                                                            osc3_table, 4, 5, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC3_AMP_MOD_AMT, "Amp Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc3_table, 5, 6, 2, 3);
+                                                                            top_level_widget, osc3_table, 5, 6, 2, 3,
+                                                                            callback_data);
 
     /* oscillator 4 */
     osc4_table = create_edit_tab_and_table("Osc4", 6, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Oscillator 4\n'Osc4'",                top_level_widget, osc4_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_OSC4_MODE,                  top_level_widget, osc4_table, 0, 1, 2, 3);
+    create_edit_place_copy_paste_buttons(Y_PORT_OSC4_MODE,                  top_level_widget, osc4_table, 0, 1, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC4_MODE, "Mode", Y_COMBOMODEL_TYPE_OSC_MODE,
-                                                                            osc4_table, 1, 2, 0, 1);
-    create_edit_place_detent_in_table(Y_PORT_OSC4_PITCH,    "Pitch",        top_level_widget, osc4_table, 2, 3, 0, 1);
+                                                                            osc4_table, 1, 2, 0, 1,
+                                                                            callback_data);
+    create_edit_place_detent_in_table(Y_PORT_OSC4_PITCH,    "Pitch",        top_level_widget, osc4_table, 2, 3, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_DETUNE, "Detune", "-50", "+50",
-                                                                            top_level_widget, osc4_table, 3, 4, 0, 1);
+                                                                            top_level_widget, osc4_table, 3, 4, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC4_PITCH_MOD_SRC, "Pitch Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc4_table, 4, 5, 0, 1);
+                                                                            osc4_table, 4, 5, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_PITCH_MOD_AMT, "Pitch Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc4_table, 5, 6, 0, 1);
+                                                                            top_level_widget, osc4_table, 5, 6, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC4_WAVEFORM, "Waveform", Y_COMBOMODEL_TYPE_WAVETABLE,
-                                                                            osc4_table, 1, 2, 1, 2);
+                                                                            osc4_table, 1, 2, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_MPARAM1, "MParam1", NULL, NULL,
-                                                                            top_level_widget, osc4_table, 2, 3, 1, 2);
+                                                                            top_level_widget, osc4_table, 2, 3, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_MPARAM2, "MParam2", NULL, NULL,
-                                                                            top_level_widget, osc4_table, 3, 4, 1, 2);
+                                                                            top_level_widget, osc4_table, 3, 4, 1, 2,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC4_MMOD_SRC, "MMod Source", Y_COMBOMODEL_TYPE_GRAIN_ENV,
-                                                                            osc4_table, 4, 5, 1, 2);
+                                                                            osc4_table, 4, 5, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_MMOD_AMT, "MMod Amount", NULL, NULL,
-                                                                            top_level_widget, osc4_table, 5, 6, 1, 2);
+                                                                            top_level_widget, osc4_table, 5, 6, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_LEVEL_A, "BusA Send Level", NULL, NULL,
-                                                                            top_level_widget, osc4_table, 2, 3, 2, 3);
+                                                                            top_level_widget, osc4_table, 2, 3, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_LEVEL_B, "BusB Send Level", NULL, NULL,
-                                                                            top_level_widget, osc4_table, 3, 4, 2, 3);
+                                                                            top_level_widget, osc4_table, 3, 4, 2, 3,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_OSC4_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            osc4_table, 4, 5, 2, 3);
+                                                                            osc4_table, 4, 5, 2, 3,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_OSC4_AMP_MOD_AMT, "Amp Mod Amount", NULL, NULL,
-                                                                            top_level_widget, osc4_table, 5, 6, 2, 3);
+                                                                            top_level_widget, osc4_table, 5, 6, 2, 3,
+                                                                            callback_data);
 
     /* filters */
     filter_table = create_edit_tab_and_table("Filters", 8, 2, top_level_widget, notebook);
@@ -2082,34 +2177,48 @@ create_edit_window (const char *tag)
     create_edit_place_label_in_table("Filter 2", top_level_widget, filter_table, 0, 1, 1, 2);
 
     create_edit_place_combo_in_table(Y_PORT_VCF1_MODE, "Mode", Y_COMBOMODEL_TYPE_FILTER_MODE,
-                                                                            filter_table, 1, 2, 0, 1);
+                                                                            filter_table, 1, 2, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_VCF1_SOURCE, "Source", Y_COMBOMODEL_TYPE_FILTER1_SRC,
-                                                                            filter_table, 2, 3, 0, 1);
+                                                                            filter_table, 2, 3, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF1_FREQUENCY, "Frequency", NULL, NULL,
-                                                                            top_level_widget, filter_table, 3, 4, 0, 1);
+                                                                            top_level_widget, filter_table, 3, 4, 0, 1,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_VCF1_FREQ_MOD_SRC, "Freq Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            filter_table, 4, 5, 0, 1);
+                                                                            filter_table, 4, 5, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF1_FREQ_MOD_AMT, "Freq Mod Amt", NULL, NULL,
-                                                                            top_level_widget, filter_table, 5, 6, 0, 1);
+                                                                            top_level_widget, filter_table, 5, 6, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF1_QRES, "Resonance", NULL, NULL,
-                                                                            top_level_widget, filter_table, 6, 7, 0, 1);
+                                                                            top_level_widget, filter_table, 6, 7, 0, 1,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF1_MPARAM, "Drive", NULL, NULL,
-                                                                            top_level_widget, filter_table, 7, 8, 0, 1);
+                                                                            top_level_widget, filter_table, 7, 8, 0, 1,
+                                                                            callback_data);
 
     create_edit_place_combo_in_table(Y_PORT_VCF2_MODE, "Mode", Y_COMBOMODEL_TYPE_FILTER_MODE,
-                                                                            filter_table, 1, 2, 1, 2);
+                                                                            filter_table, 1, 2, 1, 2,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_VCF2_SOURCE, "Source", Y_COMBOMODEL_TYPE_FILTER2_SRC,
-                                                                            filter_table, 2, 3, 1, 2);
+                                                                            filter_table, 2, 3, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF2_FREQUENCY, "Frequency", NULL, NULL,
-                                                                            top_level_widget, filter_table, 3, 4, 1, 2);
+                                                                            top_level_widget, filter_table, 3, 4, 1, 2,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_VCF2_FREQ_MOD_SRC, "Freq Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                            filter_table, 4, 5, 1, 2);
+                                                                            filter_table, 4, 5, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF2_FREQ_MOD_AMT, "Freq Mod Amt", NULL, NULL,
-                                                                            top_level_widget, filter_table, 5, 6, 1, 2);
+                                                                            top_level_widget, filter_table, 5, 6, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF2_QRES, "Resonance", NULL, NULL,
-                                                                            top_level_widget, filter_table, 6, 7, 1, 2);
+                                                                            top_level_widget, filter_table, 6, 7, 1, 2,
+                                                                            callback_data);
     create_edit_place_knob_in_table(Y_PORT_VCF2_MPARAM, "Drive", NULL, NULL,
-                                                                            top_level_widget, filter_table, 7, 8, 1, 2);
+                                                                            top_level_widget, filter_table, 7, 8, 1, 2,
+                                                                            callback_data);
     hbox = gtk_hbox_new (TRUE, 0);
     gtk_widget_ref (hbox);
     gtk_object_set_data_full (GTK_OBJECT (top_level_widget), "edit filter copy/paste hbox", hbox,
@@ -2128,7 +2237,7 @@ create_edit_window (const char *tag)
     gtk_box_pack_start (GTK_BOX (hbox), copy_button, TRUE, FALSE, 0);
     gtk_signal_connect (GTK_OBJECT (copy_button), "clicked",
                         GTK_SIGNAL_FUNC (on_voice_element_copy),
-                        (gpointer)Y_PORT_VCF1_MODE);
+                        (gpointer)&callback_data[Y_PORT_VCF1_MODE]);
 
     paste_button = gtk_button_new_with_label ("Paste Filter1");
     gtk_widget_ref (paste_button);
@@ -2138,7 +2247,7 @@ create_edit_window (const char *tag)
     gtk_box_pack_start (GTK_BOX (hbox), paste_button, TRUE, FALSE, 0);
     gtk_signal_connect (GTK_OBJECT (paste_button), "clicked",
                         GTK_SIGNAL_FUNC (on_voice_element_paste),
-                        (gpointer)Y_PORT_VCF1_MODE);
+                        (gpointer)&callback_data[Y_PORT_VCF1_MODE]);
 
     copy_button = gtk_button_new_with_label ("Copy Filter2");
     gtk_widget_ref (copy_button);
@@ -2148,7 +2257,7 @@ create_edit_window (const char *tag)
     gtk_box_pack_start (GTK_BOX (hbox), copy_button, TRUE, FALSE, 0);
     gtk_signal_connect (GTK_OBJECT (copy_button), "clicked",
                         GTK_SIGNAL_FUNC (on_voice_element_copy),
-                        (gpointer)Y_PORT_VCF2_MODE);
+                        (gpointer)&callback_data[Y_PORT_VCF2_MODE]);
 
     paste_button = gtk_button_new_with_label ("Paste Filter2");
     gtk_widget_ref (paste_button);
@@ -2158,7 +2267,7 @@ create_edit_window (const char *tag)
     gtk_box_pack_start (GTK_BOX (hbox), paste_button, TRUE, FALSE, 0);
     gtk_signal_connect (GTK_OBJECT (paste_button), "clicked",
                         GTK_SIGNAL_FUNC (on_voice_element_paste),
-                        (gpointer)Y_PORT_VCF2_MODE);
+                        (gpointer)&callback_data[Y_PORT_VCF2_MODE]);
 
     /* output mix */
     mix_table = create_edit_tab_and_table("Mix", 6, 3, top_level_widget, notebook);
@@ -2169,23 +2278,35 @@ create_edit_window (const char *tag)
     create_edit_place_label_in_table("Master Volume", top_level_widget, mix_table, 5, 6, 0, 1);
     create_edit_place_label_in_table("Level",         top_level_widget, mix_table, 0, 1, 1, 2);
     create_edit_place_label_in_table("Pan",           top_level_widget, mix_table, 0, 1, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_BUSA_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 1, 2, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_BUSA_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 1, 2, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_BUSB_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 2, 3, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_BUSB_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 2, 3, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_VCF1_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 3, 4, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_VCF1_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 3, 4, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_VCF2_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 4, 5, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_VCF2_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 4, 5, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_VOLUME,     NULL, NULL, NULL, top_level_widget, mix_table, 5, 6, 1, 2);
+    create_edit_place_knob_in_table(Y_PORT_BUSA_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 1, 2, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_BUSA_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 1, 2, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_BUSB_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 2, 3, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_BUSB_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 2, 3, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_VCF1_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 3, 4, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_VCF1_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 3, 4, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_VCF2_LEVEL, NULL, NULL, NULL, top_level_widget, mix_table, 4, 5, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_VCF2_PAN,   NULL, "L",  "R",  top_level_widget, mix_table, 4, 5, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_VOLUME,     NULL, NULL, NULL, top_level_widget, mix_table, 5, 6, 1, 2,
+                                    callback_data);
 
     /* effect */
     effect_table = create_edit_tab_and_table("Effect", 6, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Effect",                              top_level_widget, effect_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_EFFECT_MODE,                top_level_widget,   effect_table, 0, 1, 1, 2);
+    create_edit_place_copy_paste_buttons(Y_PORT_EFFECT_MODE,                top_level_widget,   effect_table, 0, 1, 1, 2,
+                                                                            callback_data);
     create_edit_place_combo_in_table(Y_PORT_EFFECT_MODE, "Effect Mode", Y_COMBOMODEL_TYPE_EFFECT_MODE,
-                                                                            effect_table, 1, 2, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EFFECT_MIX, "Mix", "Dry", "Wet", top_level_widget, effect_table, 1, 2, 1, 2);
+                                                                            effect_table, 1, 2, 0, 1,
+                                                                            callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EFFECT_MIX, "Mix", "Dry", "Wet", top_level_widget, effect_table, 1, 2, 1, 2,
+                                    callback_data);
 
     vseparator = gtk_vseparator_new ();
     gtk_widget_ref (vseparator);
@@ -2196,12 +2317,18 @@ create_edit_window (const char *tag)
                           (GtkAttachOptions) (GTK_FILL),
                           (GtkAttachOptions) (GTK_FILL), 5, 0);
 
-    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM1, "Param 1", NULL, NULL, top_level_widget, effect_table, 3, 4, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM2, "Param 2", NULL, NULL, top_level_widget, effect_table, 4, 5, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM3, "Param 3", NULL, NULL, top_level_widget, effect_table, 5, 6, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM4, "Param 4", NULL, NULL, top_level_widget, effect_table, 3, 4, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM5, "Param 5", NULL, NULL, top_level_widget, effect_table, 4, 5, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM6, "Param 6", NULL, NULL, top_level_widget, effect_table, 5, 6, 1, 2);
+    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM1, "Param 1", NULL, NULL, top_level_widget, effect_table, 3, 4, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM2, "Param 2", NULL, NULL, top_level_widget, effect_table, 4, 5, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM3, "Param 3", NULL, NULL, top_level_widget, effect_table, 5, 6, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM4, "Param 4", NULL, NULL, top_level_widget, effect_table, 3, 4, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM5, "Param 5", NULL, NULL, top_level_widget, effect_table, 4, 5, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EFFECT_PARAM6, "Param 6", NULL, NULL, top_level_widget, effect_table, 5, 6, 1, 2,
+                                    callback_data);
 
     /* LFOs */
     lfo_table = create_edit_tab_and_table("LFOs", 8, 4, top_level_widget, notebook);
@@ -2215,42 +2342,65 @@ create_edit_window (const char *tag)
     create_edit_place_label_in_table("Global LFO\n'GLFO'", top_level_widget, lfo_table, 0, 1, 1, 2);
     create_edit_place_label_in_table("Voice  LFO\n'VLFO'", top_level_widget, lfo_table, 0, 1, 2, 3);
     create_edit_place_label_in_table("Multi-Phase\nLFO 'MLFO'", top_level_widget, lfo_table, 0, 1, 3, 4);
-    create_edit_place_knob_in_table(Y_PORT_GLFO_FREQUENCY, NULL, NULL, NULL,    top_level_widget, lfo_table, 1, 2, 1, 2);
+    create_edit_place_knob_in_table(Y_PORT_GLFO_FREQUENCY, NULL, NULL, NULL,    top_level_widget, lfo_table, 1, 2, 1, 2,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_GLFO_WAVEFORM, NULL, Y_COMBOMODEL_TYPE_WAVETABLE,
-                                                                                lfo_table, 2, 3, 1, 2);
+                                                                                lfo_table, 2, 3, 1, 2,
+                                                                                callback_data);
     create_edit_place_combo_in_table(Y_PORT_GLFO_AMP_MOD_SRC, NULL, Y_COMBOMODEL_TYPE_GLFO_MOD_SRC,
-                                                                                lfo_table, 3, 4, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_GLFO_AMP_MOD_AMT, NULL, NULL, NULL,  top_level_widget, lfo_table, 4, 5, 1, 2);
+                                                                                lfo_table, 3, 4, 1, 2,
+                                                                                callback_data);
+    create_edit_place_knob_in_table(Y_PORT_GLFO_AMP_MOD_AMT, NULL, NULL, NULL,  top_level_widget, lfo_table, 4, 5, 1, 2,
+                                    callback_data);
 
-    create_edit_place_knob_in_table(Y_PORT_VLFO_FREQUENCY, NULL, NULL, NULL,    top_level_widget, lfo_table, 1, 2, 2, 3);
+    create_edit_place_knob_in_table(Y_PORT_VLFO_FREQUENCY, NULL, NULL, NULL,    top_level_widget, lfo_table, 1, 2, 2, 3,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_VLFO_WAVEFORM, NULL, Y_COMBOMODEL_TYPE_WAVETABLE,
-                                                                                lfo_table, 2, 3, 2, 3);
+                                                                                lfo_table, 2, 3, 2, 3,
+                                                                                callback_data);
     create_edit_place_combo_in_table(Y_PORT_VLFO_AMP_MOD_SRC, NULL, Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                lfo_table, 3, 4, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_VLFO_AMP_MOD_AMT, NULL, NULL, NULL,  top_level_widget, lfo_table, 4, 5, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_VLFO_DELAY, NULL, NULL, NULL,        top_level_widget, lfo_table, 5, 6, 2, 3);
+                                                                                lfo_table, 3, 4, 2, 3,
+                                                                                callback_data);
+    create_edit_place_knob_in_table(Y_PORT_VLFO_AMP_MOD_AMT, NULL, NULL, NULL,  top_level_widget, lfo_table, 4, 5, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_VLFO_DELAY, NULL, NULL, NULL,        top_level_widget, lfo_table, 5, 6, 2, 3,
+                                    callback_data);
                                                                    
-    create_edit_place_knob_in_table(Y_PORT_MLFO_FREQUENCY, NULL, NULL, NULL,    top_level_widget, lfo_table, 1, 2, 3, 4);
+    create_edit_place_knob_in_table(Y_PORT_MLFO_FREQUENCY, NULL, NULL, NULL,    top_level_widget, lfo_table, 1, 2, 3, 4,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_MLFO_WAVEFORM, NULL, Y_COMBOMODEL_TYPE_WAVETABLE,
-                                                                                lfo_table, 2, 3, 3, 4);
+                                                                                lfo_table, 2, 3, 3, 4,
+                                                                                callback_data);
     create_edit_place_combo_in_table(Y_PORT_MLFO_AMP_MOD_SRC, NULL, Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                lfo_table, 3, 4, 3, 4);
-    create_edit_place_knob_in_table(Y_PORT_MLFO_AMP_MOD_AMT, NULL, NULL, NULL,  top_level_widget, lfo_table, 4, 5, 3, 4);
-    create_edit_place_knob_in_table(Y_PORT_MLFO_DELAY, NULL, NULL, NULL,        top_level_widget, lfo_table, 5, 6, 3, 4);
-    create_edit_place_knob_in_table(Y_PORT_MLFO_PHASE_SPREAD, NULL, NULL, NULL, top_level_widget, lfo_table, 6, 7, 3, 4);
-    create_edit_place_knob_in_table(Y_PORT_MLFO_RANDOM_FREQ, NULL, NULL, NULL,  top_level_widget, lfo_table, 7, 8, 3, 4);
+                                                                                lfo_table, 3, 4, 3, 4,
+                                                                                callback_data);
+    create_edit_place_knob_in_table(Y_PORT_MLFO_AMP_MOD_AMT, NULL, NULL, NULL,  top_level_widget, lfo_table, 4, 5, 3, 4,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_MLFO_DELAY, NULL, NULL, NULL,        top_level_widget, lfo_table, 5, 6, 3, 4,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_MLFO_PHASE_SPREAD, NULL, NULL, NULL, top_level_widget, lfo_table, 6, 7, 3, 4,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_MLFO_RANDOM_FREQ, NULL, NULL, NULL,  top_level_widget, lfo_table, 7, 8, 3, 4,
+                                    callback_data);
 
     /* EGO */
     eg_table = create_edit_tab_and_table("EGO", 8, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Output\nEnvelope\nGenerator \n'EGO'",              top_level_widget, eg_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_EGO_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3);
-    create_edit_place_combo_in_table(Y_PORT_EGO_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EGO_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EGO_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EGO_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2);
+    create_edit_place_copy_paste_buttons(Y_PORT_EGO_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_combo_in_table(Y_PORT_EGO_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1,
+                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_EGO_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                         eg_table, 1, 2, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EGO_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3);
+                                                                                         eg_table, 1, 2, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3,
+                                    callback_data);
 
     vseparator = gtk_vseparator_new ();
     gtk_widget_ref (vseparator);
@@ -2262,32 +2412,50 @@ create_edit_window (const char *tag)
                           (GtkAttachOptions) (GTK_FILL), 5, 0);
 
     create_edit_place_combo_in_table(Y_PORT_EGO_SHAPE1, "Attack 1 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 4, 5, 0, 1);
+                                                                                     eg_table, 4, 5, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EGO_SHAPE2, "Attack 2 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 5, 6, 0, 1);
+                                                                                     eg_table, 5, 6, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EGO_SHAPE3, "Attack 3 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 6, 7, 0, 1);
+                                                                                     eg_table, 6, 7, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EGO_SHAPE4, "Release Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 7, 8, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EGO_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EGO_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EGO_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EGO_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EGO_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EGO_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EGO_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3);
+                                                                                     eg_table, 7, 8, 0, 1,
+                                                                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EGO_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3,
+                                    callback_data);
 
     /* EG1*/
     eg_table = create_edit_tab_and_table("EG1", 8, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Envelope\nGenerator \n'EG1'",                      top_level_widget, eg_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_EG1_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3);
-    create_edit_place_combo_in_table(Y_PORT_EG1_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG1_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG1_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG1_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2);
+    create_edit_place_copy_paste_buttons(Y_PORT_EG1_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_combo_in_table(Y_PORT_EG1_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1,
+                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG1_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                         eg_table, 1, 2, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG1_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3);
+                                                                                         eg_table, 1, 2, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3,
+                                    callback_data);
 
     vseparator = gtk_vseparator_new ();
     gtk_widget_ref (vseparator);
@@ -2299,32 +2467,50 @@ create_edit_window (const char *tag)
                           (GtkAttachOptions) (GTK_FILL), 5, 0);
 
     create_edit_place_combo_in_table(Y_PORT_EG1_SHAPE1, "Attack 1 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 4, 5, 0, 1);
+                                                                                     eg_table, 4, 5, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG1_SHAPE2, "Attack 2 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 5, 6, 0, 1);
+                                                                                     eg_table, 5, 6, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG1_SHAPE3, "Attack 3 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 6, 7, 0, 1);
+                                                                                     eg_table, 6, 7, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG1_SHAPE4, "Release Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 7, 8, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG1_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG1_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG1_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG1_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG1_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG1_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG1_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3);
+                                                                                     eg_table, 7, 8, 0, 1,
+                                                                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG1_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3,
+                                    callback_data);
 
     /* EG2*/
     eg_table = create_edit_tab_and_table("EG2", 8, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Envelope\nGenerator \n'EG2'",                      top_level_widget, eg_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_EG2_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3);
-    create_edit_place_combo_in_table(Y_PORT_EG2_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG2_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG2_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG2_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2);
+    create_edit_place_copy_paste_buttons(Y_PORT_EG2_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_combo_in_table(Y_PORT_EG2_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1,
+                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG2_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                         eg_table, 1, 2, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG2_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3);
+                                                                                         eg_table, 1, 2, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3,
+                                    callback_data);
 
     vseparator = gtk_vseparator_new ();
     gtk_widget_ref (vseparator);
@@ -2336,32 +2522,50 @@ create_edit_window (const char *tag)
                           (GtkAttachOptions) (GTK_FILL), 5, 0);
 
     create_edit_place_combo_in_table(Y_PORT_EG2_SHAPE1, "Attack 1 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 4, 5, 0, 1);
+                                                                                     eg_table, 4, 5, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG2_SHAPE2, "Attack 2 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 5, 6, 0, 1);
+                                                                                     eg_table, 5, 6, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG2_SHAPE3, "Attack 3 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 6, 7, 0, 1);
+                                                                                     eg_table, 6, 7, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG2_SHAPE4, "Release Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 7, 8, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG2_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG2_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG2_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG2_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG2_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG2_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG2_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3);
+                                                                                     eg_table, 7, 8, 0, 1,
+                                                                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG2_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3,
+                                    callback_data);
 
     /* EG3*/
     eg_table = create_edit_tab_and_table("EG3", 8, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Envelope\nGenerator \n'EG3'",                      top_level_widget, eg_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_EG3_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3);
-    create_edit_place_combo_in_table(Y_PORT_EG3_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG3_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG3_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG3_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2);
+    create_edit_place_copy_paste_buttons(Y_PORT_EG3_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_combo_in_table(Y_PORT_EG3_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1,
+                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG3_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                         eg_table, 1, 2, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG3_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3);
+                                                                                         eg_table, 1, 2, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3,
+                                    callback_data);
 
     vseparator = gtk_vseparator_new ();
     gtk_widget_ref (vseparator);
@@ -2373,32 +2577,50 @@ create_edit_window (const char *tag)
                           (GtkAttachOptions) (GTK_FILL), 5, 0);
 
     create_edit_place_combo_in_table(Y_PORT_EG3_SHAPE1, "Attack 1 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 4, 5, 0, 1);
+                                                                                     eg_table, 4, 5, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG3_SHAPE2, "Attack 2 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 5, 6, 0, 1);
+                                                                                     eg_table, 5, 6, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG3_SHAPE3, "Attack 3 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 6, 7, 0, 1);
+                                                                                     eg_table, 6, 7, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG3_SHAPE4, "Release Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 7, 8, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG3_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG3_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG3_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG3_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG3_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG3_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG3_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3);
+                                                                                     eg_table, 7, 8, 0, 1,
+                                                                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG3_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3,
+                                    callback_data);
 
     /* EG4*/
     eg_table = create_edit_tab_and_table("EG4", 8, 3, top_level_widget, notebook);
     create_edit_place_label_in_table("Envelope\nGenerator \n'EG4'",                      top_level_widget, eg_table, 0, 1, 0, 1);
-    create_edit_place_copy_paste_buttons(Y_PORT_EG4_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3);
-    create_edit_place_combo_in_table(Y_PORT_EG4_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG4_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG4_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG4_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2);
+    create_edit_place_copy_paste_buttons(Y_PORT_EG4_MODE,                                top_level_widget, eg_table, 0, 1, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_combo_in_table(Y_PORT_EG4_MODE, "Mode", Y_COMBOMODEL_TYPE_EG_MODE,     eg_table, 1, 2, 0, 1,
+                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_VEL_LEVEL_SENS, "Vel->Level", NULL, NULL, top_level_widget, eg_table, 2, 3, 0, 1,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_VEL_TIME_SCALE, "Vel->Time", NULL, NULL,  top_level_widget, eg_table, 1, 2, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_KBD_TIME_SCALE, "Kbd->Time", NULL, NULL,  top_level_widget, eg_table, 2, 3, 1, 2,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG4_AMP_MOD_SRC, "Amp Mod Source", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                         eg_table, 1, 2, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG4_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3);
+                                                                                         eg_table, 1, 2, 2, 3,
+                                                                                         callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_AMP_MOD_AMT, "Amp Mod Amt", NULL, NULL,   top_level_widget, eg_table, 2, 3, 2, 3,
+                                    callback_data);
 
     vseparator = gtk_vseparator_new ();
     gtk_widget_ref (vseparator);
@@ -2410,32 +2632,48 @@ create_edit_window (const char *tag)
                           (GtkAttachOptions) (GTK_FILL), 5, 0);
 
     create_edit_place_combo_in_table(Y_PORT_EG4_SHAPE1, "Attack 1 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 4, 5, 0, 1);
+                                                                                     eg_table, 4, 5, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG4_SHAPE2, "Attack 2 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 5, 6, 0, 1);
+                                                                                     eg_table, 5, 6, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG4_SHAPE3, "Attack 3 Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 6, 7, 0, 1);
+                                                                                     eg_table, 6, 7, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_EG4_SHAPE4, "Release Shape", Y_COMBOMODEL_TYPE_EG_SHAPE,
-                                                                                     eg_table, 7, 8, 0, 1);
-    create_edit_place_knob_in_table(Y_PORT_EG4_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG4_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG4_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG4_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2);
-    create_edit_place_knob_in_table(Y_PORT_EG4_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG4_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3);
-    create_edit_place_knob_in_table(Y_PORT_EG4_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3);
+                                                                                     eg_table, 7, 8, 0, 1,
+                                                                                     callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_TIME1,  "Attack 1 Time",  NULL, NULL, top_level_widget, eg_table, 4, 5, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_TIME2,  "Attack 2 Time",  NULL, NULL, top_level_widget, eg_table, 5, 6, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_TIME3,  "Attack 3 Time",  NULL, NULL, top_level_widget, eg_table, 6, 7, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_TIME4,  "Release Time",   NULL, NULL, top_level_widget, eg_table, 7, 8, 1, 2,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_LEVEL1, "Attack 1 Level", NULL, NULL, top_level_widget, eg_table, 4, 5, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_LEVEL2, "Attack 2 Level", NULL, NULL, top_level_widget, eg_table, 5, 6, 2, 3,
+                                    callback_data);
+    create_edit_place_knob_in_table(Y_PORT_EG4_LEVEL3, "Sustain Level ", NULL, NULL, top_level_widget, eg_table, 6, 7, 2, 3,
+                                    callback_data);
 
     /* Miscellaneous */
     misc_table = create_edit_tab_and_table("Miscellaneous", 5, 3, top_level_widget, notebook);
-    create_edit_place_knob_in_table(Y_PORT_MODMIX_BIAS, "ModMix Bias", NULL, NULL,   top_level_widget, misc_table, 0, 1, 0, 1);
+    create_edit_place_knob_in_table(Y_PORT_MODMIX_BIAS, "ModMix Bias", NULL, NULL,   top_level_widget, misc_table, 0, 1, 0, 1,
+                                    callback_data);
     create_edit_place_combo_in_table(Y_PORT_MODMIX_MOD1_SRC, "ModMix Mod 1 Src", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                     misc_table, 1, 2, 0, 1);
+                                                                                     misc_table, 1, 2, 0, 1,
+                                                                                     callback_data);
     create_edit_place_knob_in_table(Y_PORT_MODMIX_MOD1_AMT, "ModMix Mod 1 Amt", NULL, NULL,
-                                                                                     top_level_widget, misc_table, 2, 3, 0, 1);
+                                                                                     top_level_widget, misc_table, 2, 3, 0, 1,
+                                                                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_MODMIX_MOD2_SRC, "ModMix Mod 2 Src", Y_COMBOMODEL_TYPE_MOD_SRC,
-                                                                                     misc_table, 3, 4, 0, 1);
+                                                                                     misc_table, 3, 4, 0, 1,
+                                                                                     callback_data);
     create_edit_place_knob_in_table(Y_PORT_MODMIX_MOD2_AMT, "ModMix Mod 2 Amt", NULL, NULL,
-                                                                                     top_level_widget, misc_table, 4, 5, 0, 1);
+                                                                                     top_level_widget, misc_table, 4, 5, 0, 1,
+                                                                                     callback_data);
 
     hseparator = gtk_hseparator_new ();
     gtk_widget_ref (hseparator);
@@ -2446,8 +2684,10 @@ create_edit_window (const char *tag)
                           (GtkAttachOptions) (GTK_FILL),
                           (GtkAttachOptions) (GTK_FILL), 0, 5);
 
-    create_edit_place_knob_in_table(Y_PORT_GLIDE_TIME, "Glide Rate", NULL, NULL, top_level_widget, misc_table, 0, 1, 2, 3);
-    create_edit_place_detent_in_table(Y_PORT_BEND_RANGE, "Bend Range",           top_level_widget, misc_table, 1, 2, 2, 3);
+    create_edit_place_knob_in_table(Y_PORT_GLIDE_TIME, "Glide Rate", NULL, NULL, top_level_widget, misc_table, 0, 1, 2, 3,
+                                    callback_data);
+    create_edit_place_detent_in_table(Y_PORT_BEND_RANGE, "Bend Range",           top_level_widget, misc_table, 1, 2, 2, 3,
+                                      callback_data);
 
     /* test note widgets */
     test_note_frame = gtk_frame_new ("Test Note");
@@ -2606,7 +2846,7 @@ create_edit_window (const char *tag)
 }
 
 void
-create_edit_save_position_window (const char *tag)
+create_edit_save_position_window (const char *tag, struct y_ui_callback_data_t* callback_data)
 {
   GtkWidget *vbox4;
   GtkWidget *position_text_label;
@@ -2712,14 +2952,14 @@ create_edit_save_position_window (const char *tag)
                         (gpointer)edit_save_position_name_label);
     gtk_signal_connect (GTK_OBJECT (position_ok), "clicked",
                         (GtkSignalFunc)on_edit_save_position_ok,
-                        NULL);
+                        callback_data);
     gtk_signal_connect (GTK_OBJECT (position_cancel), "clicked",
                         (GtkSignalFunc)on_edit_save_position_cancel,
                         NULL);
 }
 
 void
-create_windows(const char *instance_tag)
+create_windows(const char *instance_tag, struct y_ui_callback_data_t* callback_data)
 {
     char tag[50];
 
@@ -2741,13 +2981,13 @@ create_windows(const char *instance_tag)
         }
     }
 
-    create_main_window(tag);
+    create_main_window(tag, callback_data);
     create_about_window(tag);
     create_open_file_chooser(tag);
     create_save_file_chooser(tag);
     create_import_file_chooser();
-    create_edit_window(tag);
-    create_edit_save_position_window(tag);
+    create_edit_window(tag, callback_data);
+    create_edit_save_position_window(tag, callback_data);
     create_notice_window(tag);
 }
 

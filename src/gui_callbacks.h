@@ -24,6 +24,7 @@
 #include <gtk/gtk.h>
 
 #include "whysynth_types.h"
+#include "gui_interface.h"
 
 void on_menu_open_activate(GtkMenuItem *menuitem, gpointer user_data);
 void on_menu_save_activate(GtkMenuItem *menuitem, gpointer user_data);
@@ -64,17 +65,17 @@ void on_glide_mode_activate(GtkWidget *widget, gpointer data);
 void on_program_cancel_toggled(GtkWidget *widget, gpointer data);
 void display_notice(char *message1, char *message2);
 void on_notice_dismiss(GtkWidget *widget, gpointer data);
-void update_osc_layout_on_mode_change(int mode_port);
-void update_vcf_layout_on_mode_change(int mode_port);
-void update_effect_layout_on_mode_change(void);
-void update_eg_layout_on_mode_change(int mode_port);
-void update_voice_widget(int port, float value, int send_OSC);
-void update_voice_widgets_from_patch(y_patch_t *patch);
-void update_from_program_select(int program);
-float get_value_from_knob(int index);
-int  get_value_from_detent(int index);
-int  get_value_from_combo(int index);
-void update_patch_from_voice_widgets(y_patch_t *patch);
+void update_osc_layout_on_mode_change(int mode_port, struct y_ui_callback_data_t* callback_data);
+void update_vcf_layout_on_mode_change(int mode_port, struct voice_widgets* voice_widgets);
+void update_effect_layout_on_mode_change(struct voice_widgets* voice_widgets);
+void update_eg_layout_on_mode_change(int mode_port, struct voice_widgets* voice_widgets);
+void update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_data_t* callback_data);
+void update_voice_widgets_from_patch(y_patch_t *patch, struct y_ui_callback_data_t* callback_data);
+void update_from_program_select(int program, struct y_ui_callback_data_t* callback_data);
+float get_value_from_knob(int index, struct voice_widgets* voice_widgets);
+int  get_value_from_detent(int index, struct voice_widgets* voice_widgets);
+int  get_value_from_combo(int index, struct voice_widgets* voice_widgets);
+void update_patch_from_voice_widgets(y_patch_t *patch, struct voice_widgets* voice_widgets);
 void update_load(const char *value);
 void update_polyphony(const char *value);
 void update_monophonic(const char *value);

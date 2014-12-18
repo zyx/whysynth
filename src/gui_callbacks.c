@@ -457,9 +457,10 @@ on_patches_selection(GtkWidget      *clist,
                      gpointer        data )
 {
     GDB_MESSAGE(GDB_GUI, " on_patches_selection: patch %d selected\n", row);
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
 
     /* set all the patch edit widgets to match */
-    update_voice_widgets_from_patch(&patches[row]);
+    update_voice_widgets_from_patch(&patches[row], callback_data);
 
     lo_send(osc_host_address, osc_program_path, "ii", row / 128, row % 128);
 }
@@ -467,61 +468,63 @@ on_patches_selection(GtkWidget      *clist,
 void
 on_voice_knob_change( GtkWidget *widget, gpointer data )
 {
-    int index = (int)data;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
     float value;
 
-    value = get_value_from_knob(index);
+    value = get_value_from_knob(callback_data->index, callback_data->voice_widgets);
     
     GDB_MESSAGE(GDB_GUI, " on_voice_knob_change: knob %d changed to %10.6f => %10.6f\n",
             index, GTK_ADJUSTMENT(widget)->value, value);
 
     if (plugin_mode == Y_DSSI)
-        lo_send(osc_host_address, osc_control_path, "if", index, value);
+        lo_send(osc_host_address, osc_control_path, "if", callback_data->index, value);
     else if (plugin_mode == Y_LV2)
-        lv2_write_function(lv2_controller, index, sizeof(float), 0, &value);
+        callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &value);
 }
 
 void
 on_voice_knob_zero(GtkWidget *widget, gpointer data)
 {
-    int port = (int)data;
-    struct y_port_descriptor *ypd = &y_port_description[port];
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
+    struct y_port_descriptor *ypd = &y_port_description[callback_data->index];
 
     if (ypd->type == Y_PORT_TYPE_PAN) {
-        GDB_MESSAGE(GDB_GUI, " on_voice_knob_zero: setting knob %d to 0.5\n", port);
-        update_voice_widget(port, 0.5f, TRUE);
+        GDB_MESSAGE(GDB_GUI, " on_voice_knob_zero: setting knob %d to 0.5\n", callback_data->index);
+        update_voice_widget(callback_data->index, 0.5f, TRUE, callback_data);
     } else {
-        GDB_MESSAGE(GDB_GUI, " on_voice_knob_zero: setting knob %d to 0\n", port);
-        update_voice_widget(port, 0.0f, TRUE);
+        GDB_MESSAGE(GDB_GUI, " on_voice_knob_zero: setting knob %d to 0\n", callback_data->index);
+        update_voice_widget(callback_data->index, 0.0f, TRUE, callback_data);
     }
 }
 
 void
-check_for_layout_update_on_port_change(int index)
+check_for_layout_update_on_port_change(int index, struct y_ui_callback_data_t* callback_data)
 {
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
+
     /* update GUI layouts in response to mode changes */
     switch (index) {
       case Y_PORT_OSC1_MODE:
       case Y_PORT_OSC2_MODE:
       case Y_PORT_OSC3_MODE:
       case Y_PORT_OSC4_MODE:
-        update_osc_layout_on_mode_change(index);
+        update_osc_layout_on_mode_change(index, callback_data);
         break;
 
       case Y_PORT_OSC1_WAVEFORM:
       case Y_PORT_OSC2_WAVEFORM:
       case Y_PORT_OSC3_WAVEFORM:
       case Y_PORT_OSC4_WAVEFORM:
-        update_osc_layout_on_mode_change(index - Y_PORT_OSC1_WAVEFORM + Y_PORT_OSC1_MODE);
+        update_osc_layout_on_mode_change(index - Y_PORT_OSC1_WAVEFORM + Y_PORT_OSC1_MODE, callback_data);
         break;
 
       case Y_PORT_VCF1_MODE:
       case Y_PORT_VCF2_MODE:
-        update_vcf_layout_on_mode_change(index);
+        update_vcf_layout_on_mode_change(index, voice_widgets);
         break;
 
       case Y_PORT_EFFECT_MODE:
-        update_effect_layout_on_mode_change();
+        update_effect_layout_on_mode_change(voice_widgets);
         break;
 
       case Y_PORT_EGO_MODE:
@@ -529,7 +532,7 @@ check_for_layout_update_on_port_change(int index)
       case Y_PORT_EG2_MODE:
       case Y_PORT_EG3_MODE:
       case Y_PORT_EG4_MODE:
-        update_eg_layout_on_mode_change(index);
+        update_eg_layout_on_mode_change(index, voice_widgets);
         break;
 
       default:
@@ -540,43 +543,43 @@ check_for_layout_update_on_port_change(int index)
 void
 on_voice_detent_change( GtkWidget *widget, gpointer data )
 {
-    int index = (int)data;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
     int value = lrintf(GTK_ADJUSTMENT(widget)->value);
 
     GDB_MESSAGE(GDB_GUI, " on_voice_detent_change: detent %d changed to %d\n",
-            index, value);
+            callback_data->index, value);
 
     if (plugin_mode == Y_DSSI)
-        lo_send(osc_host_address, osc_control_path, "if", index, (float)value);
+        lo_send(osc_host_address, osc_control_path, "if", callback_data->index, (float)value);
     else if (plugin_mode == Y_LV2)
     {
         float floatValue = (float)value;
-        lv2_write_function(lv2_controller, index, sizeof(float), 0, &floatValue);
+        callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &floatValue);
     }
 }
 
 void
 on_voice_onoff_toggled( GtkWidget *widget, gpointer data )
 {
-    int index = (int)data;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
     int state = GTK_TOGGLE_BUTTON (widget)->active;
 
     GDB_MESSAGE(GDB_GUI, " on_voice_onoff_toggled: button %d changed to %s\n",
-                index, (state ? "on" : "off"));
+                callback_data->index, (state ? "on" : "off"));
 
     if (plugin_mode == Y_DSSI)
-        lo_send(osc_host_address, osc_control_path, "if", index, (state ? 1.0f : 0.0f));
+        lo_send(osc_host_address, osc_control_path, "if", callback_data->index, (state ? 1.0f : 0.0f));
     else if (plugin_mode == Y_LV2)
     {
         float value = state? 1.0f : 0.0f;
-        lv2_write_function(lv2_controller, index, sizeof(float), 0, &value);
+        callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &value);
     }
 }
 
 void
 on_voice_combo_change( GtkWidget *widget, gpointer data )
 {
-    int index = (int)data;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(widget));
     int value = 0;  /* default to 0 if no row is active */
@@ -589,24 +592,26 @@ on_voice_combo_change( GtkWidget *widget, gpointer data )
      * associated with the combo box. */
     g_object_set_qdata(G_OBJECT(widget), combo_value_quark, (gpointer)value);
 
-    GDB_MESSAGE(GDB_GUI, " on_voice_combo_change: combo %d changed to %d\n", index, value);
+    GDB_MESSAGE(GDB_GUI, " on_voice_combo_change: combo %d changed to %d\n", callback_data->index, value);
 
     if (plugin_mode == Y_DSSI)
-        lo_send(osc_host_address, osc_control_path, "if", index, (float)value);
+        lo_send(osc_host_address, osc_control_path, "if", callback_data->index, (float)value);
     else if (plugin_mode == Y_LV2)
     {
         float floatValue = (float)value;
-        lv2_write_function(lv2_controller, index, sizeof(float), 0, &floatValue);
+        callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &floatValue);
     }
 
-    check_for_layout_update_on_port_change(index);
+    check_for_layout_update_on_port_change(callback_data->index, callback_data);
 }
 
 void
 on_voice_element_copy(GtkWidget *widget, gpointer data)
 {
-    int index = (int)data,
-        offset;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
+    int index = callback_data->index;
+    int offset;
 
     GDB_MESSAGE(GDB_GUI, " on_voice_element_copy: copying element beginning at port %d\n", index);
 
@@ -617,45 +622,45 @@ on_voice_element_copy(GtkWidget *widget, gpointer data)
       case Y_PORT_OSC3_MODE:
       case Y_PORT_OSC4_MODE:
         offset = index - Y_PORT_OSC1_MODE;
-        osc_clipboard.mode          = get_value_from_combo(offset + Y_PORT_OSC1_MODE);
-        osc_clipboard.waveform      = get_value_from_combo(offset + Y_PORT_OSC1_WAVEFORM);
-        osc_clipboard.pitch         = get_value_from_detent(offset + Y_PORT_OSC1_PITCH);
-        osc_clipboard.detune        = get_value_from_knob(offset + Y_PORT_OSC1_DETUNE);
-        osc_clipboard.pitch_mod_src = get_value_from_combo(offset + Y_PORT_OSC1_PITCH_MOD_SRC);
-        osc_clipboard.pitch_mod_amt = get_value_from_knob(offset + Y_PORT_OSC1_PITCH_MOD_AMT);
-        osc_clipboard.mparam1       = get_value_from_knob(offset + Y_PORT_OSC1_MPARAM1);
-        osc_clipboard.mparam2       = get_value_from_knob(offset + Y_PORT_OSC1_MPARAM2);
-        osc_clipboard.mmod_src      = get_value_from_combo(offset + Y_PORT_OSC1_MMOD_SRC);
-        osc_clipboard.mmod_amt      = get_value_from_knob(offset + Y_PORT_OSC1_MMOD_AMT);
-        osc_clipboard.amp_mod_src   = get_value_from_combo(offset + Y_PORT_OSC1_AMP_MOD_SRC);
-        osc_clipboard.amp_mod_amt   = get_value_from_knob(offset + Y_PORT_OSC1_AMP_MOD_AMT);
-        osc_clipboard.level_a       = get_value_from_knob(offset + Y_PORT_OSC1_LEVEL_A);
-        osc_clipboard.level_b       = get_value_from_knob(offset + Y_PORT_OSC1_LEVEL_B);
+        osc_clipboard.mode          = get_value_from_combo(offset + Y_PORT_OSC1_MODE, voice_widgets);
+        osc_clipboard.waveform      = get_value_from_combo(offset + Y_PORT_OSC1_WAVEFORM, voice_widgets);
+        osc_clipboard.pitch         = get_value_from_detent(offset + Y_PORT_OSC1_PITCH, voice_widgets);
+        osc_clipboard.detune        = get_value_from_knob(offset + Y_PORT_OSC1_DETUNE, voice_widgets);
+        osc_clipboard.pitch_mod_src = get_value_from_combo(offset + Y_PORT_OSC1_PITCH_MOD_SRC, voice_widgets);
+        osc_clipboard.pitch_mod_amt = get_value_from_knob(offset + Y_PORT_OSC1_PITCH_MOD_AMT, voice_widgets);
+        osc_clipboard.mparam1       = get_value_from_knob(offset + Y_PORT_OSC1_MPARAM1, voice_widgets);
+        osc_clipboard.mparam2       = get_value_from_knob(offset + Y_PORT_OSC1_MPARAM2, voice_widgets);
+        osc_clipboard.mmod_src      = get_value_from_combo(offset + Y_PORT_OSC1_MMOD_SRC, voice_widgets);
+        osc_clipboard.mmod_amt      = get_value_from_knob(offset + Y_PORT_OSC1_MMOD_AMT, voice_widgets);
+        osc_clipboard.amp_mod_src   = get_value_from_combo(offset + Y_PORT_OSC1_AMP_MOD_SRC, voice_widgets);
+        osc_clipboard.amp_mod_amt   = get_value_from_knob(offset + Y_PORT_OSC1_AMP_MOD_AMT, voice_widgets);
+        osc_clipboard.level_a       = get_value_from_knob(offset + Y_PORT_OSC1_LEVEL_A, voice_widgets);
+        osc_clipboard.level_b       = get_value_from_knob(offset + Y_PORT_OSC1_LEVEL_B, voice_widgets);
         osc_clipboard_valid = 1;
         break;
 
       case Y_PORT_VCF1_MODE:
       case Y_PORT_VCF2_MODE:
         offset = index - Y_PORT_VCF1_MODE;
-        vcf_clipboard.mode          = get_value_from_combo(offset + Y_PORT_VCF1_MODE);
-        vcf_clipboard.source        = get_value_from_combo(offset + Y_PORT_VCF1_SOURCE);
-        vcf_clipboard.frequency     = get_value_from_knob(offset + Y_PORT_VCF1_FREQUENCY);
-        vcf_clipboard.freq_mod_src  = get_value_from_combo(offset + Y_PORT_VCF1_FREQ_MOD_SRC);
-        vcf_clipboard.freq_mod_amt  = get_value_from_knob(offset + Y_PORT_VCF1_FREQ_MOD_AMT);
-        vcf_clipboard.qres          = get_value_from_knob(offset + Y_PORT_VCF1_QRES);
-        vcf_clipboard.mparam        = get_value_from_knob(offset + Y_PORT_VCF1_MPARAM);
+        vcf_clipboard.mode          = get_value_from_combo(offset + Y_PORT_VCF1_MODE, voice_widgets);
+        vcf_clipboard.source        = get_value_from_combo(offset + Y_PORT_VCF1_SOURCE, voice_widgets);
+        vcf_clipboard.frequency     = get_value_from_knob(offset + Y_PORT_VCF1_FREQUENCY, voice_widgets);
+        vcf_clipboard.freq_mod_src  = get_value_from_combo(offset + Y_PORT_VCF1_FREQ_MOD_SRC, voice_widgets);
+        vcf_clipboard.freq_mod_amt  = get_value_from_knob(offset + Y_PORT_VCF1_FREQ_MOD_AMT, voice_widgets);
+        vcf_clipboard.qres          = get_value_from_knob(offset + Y_PORT_VCF1_QRES, voice_widgets);
+        vcf_clipboard.mparam        = get_value_from_knob(offset + Y_PORT_VCF1_MPARAM, voice_widgets);
         vcf_clipboard_valid = 1;
         break;
 
       case Y_PORT_EFFECT_MODE:
-        effect_clipboard.effect_mode   = get_value_from_combo(Y_PORT_EFFECT_MODE);
-        effect_clipboard.effect_param1 = get_value_from_knob(Y_PORT_EFFECT_PARAM1);
-        effect_clipboard.effect_param2 = get_value_from_knob(Y_PORT_EFFECT_PARAM2);
-        effect_clipboard.effect_param3 = get_value_from_knob(Y_PORT_EFFECT_PARAM3);
-        effect_clipboard.effect_param4 = get_value_from_knob(Y_PORT_EFFECT_PARAM4);
-        effect_clipboard.effect_param5 = get_value_from_knob(Y_PORT_EFFECT_PARAM5);
-        effect_clipboard.effect_param6 = get_value_from_knob(Y_PORT_EFFECT_PARAM6);
-        effect_clipboard.effect_mix    = get_value_from_knob(Y_PORT_EFFECT_MIX);
+        effect_clipboard.effect_mode   = get_value_from_combo(Y_PORT_EFFECT_MODE, voice_widgets);
+        effect_clipboard.effect_param1 = get_value_from_knob(Y_PORT_EFFECT_PARAM1, voice_widgets);
+        effect_clipboard.effect_param2 = get_value_from_knob(Y_PORT_EFFECT_PARAM2, voice_widgets);
+        effect_clipboard.effect_param3 = get_value_from_knob(Y_PORT_EFFECT_PARAM3, voice_widgets);
+        effect_clipboard.effect_param4 = get_value_from_knob(Y_PORT_EFFECT_PARAM4, voice_widgets);
+        effect_clipboard.effect_param5 = get_value_from_knob(Y_PORT_EFFECT_PARAM5, voice_widgets);
+        effect_clipboard.effect_param6 = get_value_from_knob(Y_PORT_EFFECT_PARAM6, voice_widgets);
+        effect_clipboard.effect_mix    = get_value_from_knob(Y_PORT_EFFECT_MIX, voice_widgets);
         effect_clipboard_valid = 1;
         break;
 
@@ -665,23 +670,23 @@ on_voice_element_copy(GtkWidget *widget, gpointer data)
       case Y_PORT_EG3_MODE:
       case Y_PORT_EG4_MODE:
         offset = index - Y_PORT_EGO_MODE;
-        eg_clipboard.mode           = get_value_from_combo(offset + Y_PORT_EGO_MODE);
-        eg_clipboard.shape1         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE1);
-        eg_clipboard.time1          = get_value_from_knob(offset + Y_PORT_EGO_TIME1);
-        eg_clipboard.level1         = get_value_from_knob(offset + Y_PORT_EGO_LEVEL1);
-        eg_clipboard.shape2         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE2);
-        eg_clipboard.time2          = get_value_from_knob(offset + Y_PORT_EGO_TIME2);
-        eg_clipboard.level2         = get_value_from_knob(offset + Y_PORT_EGO_LEVEL2);
-        eg_clipboard.shape3         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE3);
-        eg_clipboard.time3          = get_value_from_knob(offset + Y_PORT_EGO_TIME3);
-        eg_clipboard.level3         = get_value_from_knob(offset + Y_PORT_EGO_LEVEL3);
-        eg_clipboard.shape4         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE4);
-        eg_clipboard.time4          = get_value_from_knob(offset + Y_PORT_EGO_TIME4);
-        eg_clipboard.vel_level_sens = get_value_from_knob(offset + Y_PORT_EGO_VEL_LEVEL_SENS);
-        eg_clipboard.vel_time_scale = get_value_from_knob(offset + Y_PORT_EGO_VEL_TIME_SCALE);
-        eg_clipboard.kbd_time_scale = get_value_from_knob(offset + Y_PORT_EGO_KBD_TIME_SCALE);
-        eg_clipboard.amp_mod_src    = get_value_from_combo(offset + Y_PORT_EGO_AMP_MOD_SRC);
-        eg_clipboard.amp_mod_amt    = get_value_from_knob(offset + Y_PORT_EGO_AMP_MOD_AMT);
+        eg_clipboard.mode           = get_value_from_combo(offset + Y_PORT_EGO_MODE, voice_widgets);
+        eg_clipboard.shape1         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE1, voice_widgets);
+        eg_clipboard.time1          = get_value_from_knob(offset + Y_PORT_EGO_TIME1, voice_widgets);
+        eg_clipboard.level1         = get_value_from_knob(offset + Y_PORT_EGO_LEVEL1, voice_widgets);
+        eg_clipboard.shape2         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE2, voice_widgets);
+        eg_clipboard.time2          = get_value_from_knob(offset + Y_PORT_EGO_TIME2, voice_widgets);
+        eg_clipboard.level2         = get_value_from_knob(offset + Y_PORT_EGO_LEVEL2, voice_widgets);
+        eg_clipboard.shape3         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE3, voice_widgets);
+        eg_clipboard.time3          = get_value_from_knob(offset + Y_PORT_EGO_TIME3, voice_widgets);
+        eg_clipboard.level3         = get_value_from_knob(offset + Y_PORT_EGO_LEVEL3, voice_widgets);
+        eg_clipboard.shape4         = get_value_from_combo(offset + Y_PORT_EGO_SHAPE4, voice_widgets);
+        eg_clipboard.time4          = get_value_from_knob(offset + Y_PORT_EGO_TIME4, voice_widgets);
+        eg_clipboard.vel_level_sens = get_value_from_knob(offset + Y_PORT_EGO_VEL_LEVEL_SENS, voice_widgets);
+        eg_clipboard.vel_time_scale = get_value_from_knob(offset + Y_PORT_EGO_VEL_TIME_SCALE, voice_widgets);
+        eg_clipboard.kbd_time_scale = get_value_from_knob(offset + Y_PORT_EGO_KBD_TIME_SCALE, voice_widgets);
+        eg_clipboard.amp_mod_src    = get_value_from_combo(offset + Y_PORT_EGO_AMP_MOD_SRC, voice_widgets);
+        eg_clipboard.amp_mod_amt    = get_value_from_knob(offset + Y_PORT_EGO_AMP_MOD_AMT, voice_widgets);
         eg_clipboard_valid = 1;
         break;
 
@@ -693,8 +698,9 @@ on_voice_element_copy(GtkWidget *widget, gpointer data)
 void
 on_voice_element_paste(GtkWidget *widget, gpointer data)
 {
-    int index = (int)data,
-        offset;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
+    int index = callback_data->index;
+    int offset;
 
     GDB_MESSAGE(GDB_GUI, " on_voice_element_paste: paste requested for element beginning at port %d\n", index);
 
@@ -707,20 +713,20 @@ on_voice_element_paste(GtkWidget *widget, gpointer data)
         if (!osc_clipboard_valid)
             return;
         offset = index - Y_PORT_OSC1_MODE;
-        update_voice_widget(offset + Y_PORT_OSC1_MODE,          (float)osc_clipboard.mode,        TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_WAVEFORM,      (float)osc_clipboard.waveform,    TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_PITCH,         (float)osc_clipboard.pitch,       TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_DETUNE,        osc_clipboard.detune,             TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_PITCH_MOD_SRC, (float)osc_clipboard.pitch_mod_src, TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_PITCH_MOD_AMT, osc_clipboard.pitch_mod_amt,      TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_MPARAM1,       osc_clipboard.mparam1,            TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_MPARAM2,       osc_clipboard.mparam2,            TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_MMOD_SRC,      (float)osc_clipboard.mmod_src,    TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_MMOD_AMT,      osc_clipboard.mmod_amt,           TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_AMP_MOD_SRC,   (float)osc_clipboard.amp_mod_src, TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_AMP_MOD_AMT,   osc_clipboard.amp_mod_amt,        TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_LEVEL_A,       osc_clipboard.level_a,            TRUE);
-        update_voice_widget(offset + Y_PORT_OSC1_LEVEL_B,       osc_clipboard.level_b,            TRUE);
+        update_voice_widget(offset + Y_PORT_OSC1_MODE,          (float)osc_clipboard.mode,        TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_WAVEFORM,      (float)osc_clipboard.waveform,    TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_PITCH,         (float)osc_clipboard.pitch,       TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_DETUNE,        osc_clipboard.detune,             TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_PITCH_MOD_SRC, (float)osc_clipboard.pitch_mod_src, TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_PITCH_MOD_AMT, osc_clipboard.pitch_mod_amt,      TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_MPARAM1,       osc_clipboard.mparam1,            TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_MPARAM2,       osc_clipboard.mparam2,            TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_MMOD_SRC,      (float)osc_clipboard.mmod_src,    TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_MMOD_AMT,      osc_clipboard.mmod_amt,           TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_AMP_MOD_SRC,   (float)osc_clipboard.amp_mod_src, TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_AMP_MOD_AMT,   osc_clipboard.amp_mod_amt,        TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_LEVEL_A,       osc_clipboard.level_a,            TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_OSC1_LEVEL_B,       osc_clipboard.level_b,            TRUE, callback_data);
         break;
 
       case Y_PORT_VCF1_MODE:
@@ -728,26 +734,26 @@ on_voice_element_paste(GtkWidget *widget, gpointer data)
         if (!vcf_clipboard_valid)
             return;
         offset = index - Y_PORT_VCF1_MODE;
-        update_voice_widget(offset + Y_PORT_VCF1_MODE,         (float)vcf_clipboard.mode,         TRUE);
-        update_voice_widget(offset + Y_PORT_VCF1_SOURCE,       (float)vcf_clipboard.source,       TRUE);
-        update_voice_widget(offset + Y_PORT_VCF1_FREQUENCY,    vcf_clipboard.frequency,           TRUE);
-        update_voice_widget(offset + Y_PORT_VCF1_FREQ_MOD_SRC, (float)vcf_clipboard.freq_mod_src, TRUE);
-        update_voice_widget(offset + Y_PORT_VCF1_FREQ_MOD_AMT, vcf_clipboard.freq_mod_amt,        TRUE);
-        update_voice_widget(offset + Y_PORT_VCF1_QRES,         vcf_clipboard.qres,                TRUE);
-        update_voice_widget(offset + Y_PORT_VCF1_MPARAM,       vcf_clipboard.mparam,              TRUE);
+        update_voice_widget(offset + Y_PORT_VCF1_MODE,         (float)vcf_clipboard.mode,         TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_VCF1_SOURCE,       (float)vcf_clipboard.source,       TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_VCF1_FREQUENCY,    vcf_clipboard.frequency,           TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_VCF1_FREQ_MOD_SRC, (float)vcf_clipboard.freq_mod_src, TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_VCF1_FREQ_MOD_AMT, vcf_clipboard.freq_mod_amt,        TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_VCF1_QRES,         vcf_clipboard.qres,                TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_VCF1_MPARAM,       vcf_clipboard.mparam,              TRUE, callback_data);
         break;
 
       case Y_PORT_EFFECT_MODE:
         if (!effect_clipboard_valid)
             return;
-        update_voice_widget(Y_PORT_EFFECT_MODE,   (float)effect_clipboard.effect_mode, TRUE);
-        update_voice_widget(Y_PORT_EFFECT_PARAM1, effect_clipboard.effect_param1,      TRUE);
-        update_voice_widget(Y_PORT_EFFECT_PARAM2, effect_clipboard.effect_param2,      TRUE);
-        update_voice_widget(Y_PORT_EFFECT_PARAM3, effect_clipboard.effect_param3,      TRUE);
-        update_voice_widget(Y_PORT_EFFECT_PARAM4, effect_clipboard.effect_param4,      TRUE);
-        update_voice_widget(Y_PORT_EFFECT_PARAM5, effect_clipboard.effect_param5,      TRUE);
-        update_voice_widget(Y_PORT_EFFECT_PARAM6, effect_clipboard.effect_param6,      TRUE);
-        update_voice_widget(Y_PORT_EFFECT_MIX,    effect_clipboard.effect_mix,         TRUE);
+        update_voice_widget(Y_PORT_EFFECT_MODE,   (float)effect_clipboard.effect_mode, TRUE, callback_data);
+        update_voice_widget(Y_PORT_EFFECT_PARAM1, effect_clipboard.effect_param1,      TRUE, callback_data);
+        update_voice_widget(Y_PORT_EFFECT_PARAM2, effect_clipboard.effect_param2,      TRUE, callback_data);
+        update_voice_widget(Y_PORT_EFFECT_PARAM3, effect_clipboard.effect_param3,      TRUE, callback_data);
+        update_voice_widget(Y_PORT_EFFECT_PARAM4, effect_clipboard.effect_param4,      TRUE, callback_data);
+        update_voice_widget(Y_PORT_EFFECT_PARAM5, effect_clipboard.effect_param5,      TRUE, callback_data);
+        update_voice_widget(Y_PORT_EFFECT_PARAM6, effect_clipboard.effect_param6,      TRUE, callback_data);
+        update_voice_widget(Y_PORT_EFFECT_MIX,    effect_clipboard.effect_mix,         TRUE, callback_data);
         break;
 
       case Y_PORT_EGO_MODE:
@@ -758,23 +764,23 @@ on_voice_element_paste(GtkWidget *widget, gpointer data)
         if (!eg_clipboard_valid)
             return;
         offset = index - Y_PORT_EGO_MODE;
-        update_voice_widget(offset + Y_PORT_EGO_MODE,           (float)eg_clipboard.mode,        TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_SHAPE1,         (float)eg_clipboard.shape1,      TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_TIME1,          eg_clipboard.time1,              TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_LEVEL1,         eg_clipboard.level1,             TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_SHAPE2,         (float)eg_clipboard.shape2,      TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_TIME2,          eg_clipboard.time2,              TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_LEVEL2,         eg_clipboard.level2,             TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_SHAPE3,         (float)eg_clipboard.shape3,      TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_TIME3,          eg_clipboard.time3,              TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_LEVEL3,         eg_clipboard.level3,             TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_SHAPE4,         (float)eg_clipboard.shape4,      TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_TIME4,          eg_clipboard.time4,              TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_VEL_LEVEL_SENS, eg_clipboard.vel_level_sens,     TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_VEL_TIME_SCALE, eg_clipboard.vel_time_scale,     TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_KBD_TIME_SCALE, eg_clipboard.kbd_time_scale,     TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_AMP_MOD_SRC,    (float)eg_clipboard.amp_mod_src, TRUE);
-        update_voice_widget(offset + Y_PORT_EGO_AMP_MOD_AMT,    eg_clipboard.amp_mod_amt,        TRUE);
+        update_voice_widget(offset + Y_PORT_EGO_MODE,           (float)eg_clipboard.mode,        TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_SHAPE1,         (float)eg_clipboard.shape1,      TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_TIME1,          eg_clipboard.time1,              TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_LEVEL1,         eg_clipboard.level1,             TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_SHAPE2,         (float)eg_clipboard.shape2,      TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_TIME2,          eg_clipboard.time2,              TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_LEVEL2,         eg_clipboard.level2,             TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_SHAPE3,         (float)eg_clipboard.shape3,      TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_TIME3,          eg_clipboard.time3,              TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_LEVEL3,         eg_clipboard.level3,             TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_SHAPE4,         (float)eg_clipboard.shape4,      TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_TIME4,          eg_clipboard.time4,              TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_VEL_LEVEL_SENS, eg_clipboard.vel_level_sens,     TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_VEL_TIME_SCALE, eg_clipboard.vel_time_scale,     TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_KBD_TIME_SCALE, eg_clipboard.kbd_time_scale,     TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_AMP_MOD_SRC,    (float)eg_clipboard.amp_mod_src, TRUE, callback_data);
+        update_voice_widget(offset + Y_PORT_EGO_AMP_MOD_AMT,    eg_clipboard.amp_mod_amt,        TRUE, callback_data);
         break;
 
       default:
@@ -947,6 +953,8 @@ on_edit_action_button_press(GtkWidget *widget, gpointer data)
 void
 on_edit_save_position_ok( GtkWidget *widget, gpointer data )
 {
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
+
     int position = lrintf(GTK_ADJUSTMENT(edit_save_position_spin_adj)->value);
 
     gtk_widget_hide(edit_save_position_window);
@@ -955,7 +963,7 @@ on_edit_save_position_ok( GtkWidget *widget, gpointer data )
 
     /* set the patch to match all the edit widgets */
     gui_data_check_patches_allocation(position);
-    update_patch_from_voice_widgets(&patches[position]);
+    update_patch_from_voice_widgets(&patches[position], callback_data->voice_widgets);
     patches_dirty = 1;
     if (position == patch_count) patch_count++;
     rebuild_patches_clist();
@@ -1051,7 +1059,7 @@ on_notice_dismiss( GtkWidget *widget, gpointer data )
 }
 
 int
-combo_get_value(int port)
+combo_get_value(int port, struct voice_widgets* voice_widgets)
 {
     GtkComboBox *combo = GTK_COMBO_BOX(voice_widgets[port].widget);
 
@@ -1059,45 +1067,48 @@ combo_get_value(int port)
 }
 
 void
-combo_set_active_row(int port, int value)
+combo_set_active_row(int port, int value, struct y_ui_callback_data_t* callback_data)
 {
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
     GtkComboBox *combo = GTK_COMBO_BOX(voice_widgets[port].widget);
     GtkTreeModel *model = gtk_combo_box_get_model(combo);
     GPtrArray *id_to_path = g_object_get_qdata(G_OBJECT(model), combomodel_id_to_path_quark);
     GtkTreeIter iter;
 
-    g_signal_handlers_block_by_func(combo, on_voice_combo_change, (gpointer)port);
+    g_signal_handlers_block_by_func(combo, on_voice_combo_change, &callback_data[port]);
     if (value >= 0 && value < id_to_path->len &&
         gtk_tree_model_get_iter_from_string(model, &iter, g_ptr_array_index(id_to_path, value))) {
         gtk_combo_box_set_active_iter(combo, &iter);
     } else {
         gtk_combo_box_set_active(combo, -1);
     }
-    g_signal_handlers_unblock_by_func(combo, on_voice_combo_change, (gpointer)port);
+    g_signal_handlers_unblock_by_func(combo, on_voice_combo_change, &callback_data[port]);
 }
 
 void
-combo_set_value(int port, int value)
+combo_set_value(int port, int value, struct y_ui_callback_data_t* callback_data)
 {
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
     GtkComboBox *combo = GTK_COMBO_BOX(voice_widgets[port].widget);
 
     /* Store the value: associated it with the widget as a qdata. See
      * on_voice_combo_change() for further description. */
     g_object_set_qdata(G_OBJECT(combo), combo_value_quark, (gpointer)value);
 
-    combo_set_active_row(port, value);
+    combo_set_active_row(port, value, callback_data);
 }
 
 void
-combo_set_combomodel_type(int port, int combomodel_type)
+combo_set_combomodel_type(int port, int combomodel_type, struct y_ui_callback_data_t* callback_data)
 {
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
     GtkComboBox *combo = GTK_COMBO_BOX(voice_widgets[port].widget);
     GtkTreeModel *model = GTK_TREE_MODEL(combomodel[combomodel_type]);
     int value = (int)g_object_get_qdata(G_OBJECT(combo), combo_value_quark);
 
     gtk_combo_box_set_model(GTK_COMBO_BOX(combo), model);
     /* we've left the combobox without an active row, set set it now */
-    combo_set_active_row(port, value);
+    combo_set_active_row(port, value, callback_data);
 }
 
 char *osc_noise_mparam1_top_labels[] = {  /* noise wave-specific labels */
@@ -1142,7 +1153,7 @@ char *osc_minblep_mmod_amt_top_labels[] = {  /* minBLEP wave-specific labels */
 };
 
 static void
-update_top_label(int port, char *text)
+update_top_label(int port, char *text, struct voice_widgets* voice_widgets)
 {
     int sensitive;
 
@@ -1158,11 +1169,12 @@ update_top_label(int port, char *text)
 
 #define MINBLEP_WAVES_COUNT 6  /* -FIX- why the hell is this here? */
 void
-update_osc_layout_on_mode_change(int mode_port)
+update_osc_layout_on_mode_change(int mode_port, struct y_ui_callback_data_t* callback_data)
 {
-    int osc_mode = get_value_from_combo(mode_port);
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
+    int osc_mode = get_value_from_combo(mode_port, voice_widgets);
     int wave_port = mode_port - Y_PORT_OSC1_MODE + Y_PORT_OSC1_WAVEFORM;
-    int osc_wave = get_value_from_combo(wave_port);
+    int osc_wave = get_value_from_combo(wave_port, voice_widgets);
     int port;
     char *text;
 
@@ -1191,15 +1203,15 @@ update_osc_layout_on_mode_change(int mode_port)
         else
             combomodel_type = Y_COMBOMODEL_TYPE_WAVETABLE;
 
-        combo_set_combomodel_type(wave_port, combomodel_type);
+        combo_set_combomodel_type(wave_port, combomodel_type, callback_data);
 
         port = mode_port - Y_PORT_OSC1_MODE + Y_PORT_OSC1_MPARAM1; /* MParam1 */
         if (osc_mode == Y_OSCILLATOR_MODE_NOISE && osc_wave < 4)  /* noise */
-            update_top_label(port, osc_noise_mparam1_top_labels[osc_wave]);
+            update_top_label(port, osc_noise_mparam1_top_labels[osc_wave], voice_widgets);
         else if (osc_mode == Y_OSCILLATOR_MODE_PD && osc_wave < 12)  /* phase distortion */
-            update_top_label(port, NULL);  /* no mod balance on single waveforms */
+            update_top_label(port, NULL, voice_widgets);  /* no mod balance on single waveforms */
         else
-            update_top_label(port, y_osc_modes[osc_mode].mparam1_top_label);
+            update_top_label(port, y_osc_modes[osc_mode].mparam1_top_label, voice_widgets);
         text = y_osc_modes[osc_mode].mparam1_left_label;
         gtk_label_set_text (GTK_LABEL (voice_widgets[port].label1), text);
         text = y_osc_modes[osc_mode].mparam1_right_label;
@@ -1207,11 +1219,11 @@ update_osc_layout_on_mode_change(int mode_port)
 
         port = mode_port - Y_PORT_OSC1_MODE + Y_PORT_OSC1_MPARAM2; /* MParam2 */
         if (osc_mode == Y_OSCILLATOR_MODE_MINBLEP && osc_wave < MINBLEP_WAVES_COUNT)  /* minBLEP */
-            update_top_label(port, osc_minblep_mparam2_top_labels[osc_wave]);
+            update_top_label(port, osc_minblep_mparam2_top_labels[osc_wave], voice_widgets);
         else if (osc_mode == Y_OSCILLATOR_MODE_NOISE && osc_wave < 4)  /* noise */
-            update_top_label(port, osc_noise_mparam2_top_labels[osc_wave]);
+            update_top_label(port, osc_noise_mparam2_top_labels[osc_wave], voice_widgets);
         else
-            update_top_label(port, y_osc_modes[osc_mode].mparam2_top_label);
+            update_top_label(port, y_osc_modes[osc_mode].mparam2_top_label, voice_widgets);
         text = y_osc_modes[osc_mode].mparam2_left_label;
         gtk_label_set_text (GTK_LABEL (voice_widgets[port].label1), text);
         text = y_osc_modes[osc_mode].mparam2_right_label;
@@ -1224,24 +1236,24 @@ update_osc_layout_on_mode_change(int mode_port)
             combomodel_type = Y_COMBOMODEL_TYPE_PADSYNTH_MODE;
         else
             combomodel_type = Y_COMBOMODEL_TYPE_MOD_SRC;
-        combo_set_combomodel_type(port, combomodel_type);
+        combo_set_combomodel_type(port, combomodel_type, callback_data);
         if (osc_mode == Y_OSCILLATOR_MODE_MINBLEP && osc_wave < MINBLEP_WAVES_COUNT)  /* minBLEP */
-            update_top_label(port, osc_minblep_mmod_src_top_labels[osc_wave]);
+            update_top_label(port, osc_minblep_mmod_src_top_labels[osc_wave], voice_widgets);
         else
-            update_top_label(port, y_osc_modes[osc_mode].mmod_src_top_label);
+            update_top_label(port, y_osc_modes[osc_mode].mmod_src_top_label, voice_widgets);
 
         port = mode_port - Y_PORT_OSC1_MODE + Y_PORT_OSC1_MMOD_AMT; /* MMod Amt */
         if (osc_mode == Y_OSCILLATOR_MODE_MINBLEP && osc_wave < MINBLEP_WAVES_COUNT)  /* minBLEP */
-            update_top_label(port, osc_minblep_mmod_amt_top_labels[osc_wave]);
+            update_top_label(port, osc_minblep_mmod_amt_top_labels[osc_wave], voice_widgets);
         else
-            update_top_label(port, y_osc_modes[osc_mode].mmod_amt_top_label);
+            update_top_label(port, y_osc_modes[osc_mode].mmod_amt_top_label, voice_widgets);
     }
 }
 
 void
-update_vcf_layout_on_mode_change(int mode_port)
+update_vcf_layout_on_mode_change(int mode_port, struct voice_widgets* voice_widgets)
 {
-    int vcf_mode = get_value_from_combo(mode_port);
+    int vcf_mode = get_value_from_combo(mode_port, voice_widgets);
     int port;
 
     if (vcf_mode < 0 || vcf_mode > Y_FILTER_MODE_COUNT)
@@ -1252,9 +1264,9 @@ update_vcf_layout_on_mode_change(int mode_port)
         voice_widgets[mode_port].last_mode = vcf_mode;
 
         port = mode_port - Y_PORT_VCF1_MODE + Y_PORT_VCF1_QRES;   /* QRes */
-        update_top_label(port, y_vcf_modes[vcf_mode].qres_top_label);
+        update_top_label(port, y_vcf_modes[vcf_mode].qres_top_label, voice_widgets);
         port = mode_port - Y_PORT_VCF1_MODE + Y_PORT_VCF1_MPARAM; /* MParam */
-        update_top_label(port, y_vcf_modes[vcf_mode].mparam_top_label);
+        update_top_label(port, y_vcf_modes[vcf_mode].mparam_top_label, voice_widgets);
         // text = vcf_mparam_left_labels[vcf_mode];
         // gtk_label_set_text (GTK_LABEL (voice_widgets[port].label1), text);
         // text = vcf_mparam_right_labels[vcf_mode];
@@ -1263,10 +1275,10 @@ update_vcf_layout_on_mode_change(int mode_port)
 }
 
 void
-update_effect_layout_on_mode_change(void)
+update_effect_layout_on_mode_change(struct voice_widgets* voice_widgets)
 {
     const int mode_port = Y_PORT_EFFECT_MODE;
-    int mode = get_value_from_combo(mode_port);
+    int mode = get_value_from_combo(mode_port, voice_widgets);
 
     if (mode < 0 || mode > Y_EFFECT_MODE_COUNT)
         mode = 0;
@@ -1275,17 +1287,17 @@ update_effect_layout_on_mode_change(void)
 
         voice_widgets[mode_port].last_mode = mode;
 
-        update_top_label(Y_PORT_EFFECT_PARAM1, y_effect_modes[mode].mparam1_top_label);
+        update_top_label(Y_PORT_EFFECT_PARAM1, y_effect_modes[mode].mparam1_top_label, voice_widgets);
         // text = effect_param1_left_labels[mode];
         // gtk_label_set_text (GTK_LABEL (voice_widgets[port].label1), text);
         // text = effect_param1_right_labels[mode];
         // gtk_label_set_text (GTK_LABEL (voice_widgets[port].label2), text);
 
-        update_top_label(Y_PORT_EFFECT_PARAM2, y_effect_modes[mode].mparam2_top_label);
-        update_top_label(Y_PORT_EFFECT_PARAM3, y_effect_modes[mode].mparam3_top_label);
-        update_top_label(Y_PORT_EFFECT_PARAM4, y_effect_modes[mode].mparam4_top_label);
-        update_top_label(Y_PORT_EFFECT_PARAM5, y_effect_modes[mode].mparam5_top_label);
-        update_top_label(Y_PORT_EFFECT_PARAM6, y_effect_modes[mode].mparam6_top_label);
+        update_top_label(Y_PORT_EFFECT_PARAM2, y_effect_modes[mode].mparam2_top_label, voice_widgets);
+        update_top_label(Y_PORT_EFFECT_PARAM3, y_effect_modes[mode].mparam3_top_label, voice_widgets);
+        update_top_label(Y_PORT_EFFECT_PARAM4, y_effect_modes[mode].mparam4_top_label, voice_widgets);
+        update_top_label(Y_PORT_EFFECT_PARAM5, y_effect_modes[mode].mparam5_top_label, voice_widgets);
+        update_top_label(Y_PORT_EFFECT_PARAM6, y_effect_modes[mode].mparam6_top_label, voice_widgets);
     }
 }
 
@@ -1389,9 +1401,9 @@ char *eg_time4_top_labels[] = {
 };
 
 void
-update_eg_layout_on_mode_change(int mode_port)
+update_eg_layout_on_mode_change(int mode_port, struct voice_widgets* voice_widgets)
 {
-    int mode = get_value_from_combo(mode_port);
+    int mode = get_value_from_combo(mode_port, voice_widgets);
     int port;
 
     if (mode < 0 || mode > 11)
@@ -1402,32 +1414,32 @@ update_eg_layout_on_mode_change(int mode_port)
         voice_widgets[mode_port].last_mode = mode;
 
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_SHAPE1;
-        update_top_label(port, eg_shape1_top_labels[mode]);
+        update_top_label(port, eg_shape1_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_TIME1;
-        update_top_label(port, eg_time1_top_labels[mode]);
+        update_top_label(port, eg_time1_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_LEVEL1;
-        update_top_label(port, eg_level1_top_labels[mode]);
+        update_top_label(port, eg_level1_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_SHAPE2;
-        update_top_label(port, eg_shape2_top_labels[mode]);
+        update_top_label(port, eg_shape2_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_TIME2;
-        update_top_label(port, eg_time2_top_labels[mode]);
+        update_top_label(port, eg_time2_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_LEVEL2;
-        update_top_label(port, eg_level2_top_labels[mode]);
+        update_top_label(port, eg_level2_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_SHAPE3;
-        update_top_label(port, eg_shape3_top_labels[mode]);
+        update_top_label(port, eg_shape3_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_TIME3;
-        update_top_label(port, eg_time3_top_labels[mode]);
+        update_top_label(port, eg_time3_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_LEVEL3;
-        update_top_label(port, eg_level3_top_labels[mode]);
+        update_top_label(port, eg_level3_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_SHAPE4;
-        update_top_label(port, eg_shape4_top_labels[mode]);
+        update_top_label(port, eg_shape4_top_labels[mode], voice_widgets);
         port = mode_port - Y_PORT_EGO_MODE + Y_PORT_EGO_TIME4;
-        update_top_label(port, eg_time4_top_labels[mode]);
+        update_top_label(port, eg_time4_top_labels[mode], voice_widgets);
     }
 }
 
 void
-update_voice_widget(int port, float value, int send_OSC)
+update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_data_t* callback_data)
 {
     struct y_port_descriptor *ypd;
     GtkAdjustment *adj;
@@ -1463,35 +1475,35 @@ update_voice_widget(int port, float value, int send_OSC)
       case Y_PORT_TYPE_BOOLEAN:
         dval = (value > 0.0001f ? 1 : 0);
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %d\n", ypd->name, value, dval);
-        widget = (GtkWidget *)voice_widgets[port].widget;
+        widget = (GtkWidget *)callback_data->voice_widgets[port].widget;
         /* update the widget, but don't call on_voice_onoff_toggled(): */
-        g_signal_handlers_block_by_func(widget, on_voice_onoff_toggled, (gpointer)port);
+        g_signal_handlers_block_by_func(widget, on_voice_onoff_toggled, &callback_data[port]);
         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), dval);
-        g_signal_handlers_unblock_by_func(widget, on_voice_onoff_toggled, (gpointer)port);
+        g_signal_handlers_unblock_by_func(widget, on_voice_onoff_toggled, &callback_data[port]);
         break;
 
       case Y_PORT_TYPE_INTEGER:
         dval = lrintf(value);
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %d\n", ypd->name, value, dval);
-        adj = (GtkAdjustment *)voice_widgets[port].adjustment;
+        adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = (float)dval;
         /* emit "value_changed" to get the widget to redraw itself, but don't call 
          * on_voice_detent_change(): */
-        g_signal_handlers_block_by_func(adj, on_voice_detent_change, (gpointer)port);
+        g_signal_handlers_block_by_func(adj, on_voice_detent_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
-        g_signal_handlers_unblock_by_func(adj, on_voice_detent_change, (gpointer)port);
+        g_signal_handlers_unblock_by_func(adj, on_voice_detent_change, &callback_data[port]);
         break;
 
       case Y_PORT_TYPE_LINEAR:
       case Y_PORT_TYPE_PAN:
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f\n", ypd->name, value);
-        adj = (GtkAdjustment *)voice_widgets[port].adjustment;
+        adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = value;
         /* emit "value_changed" to get the widget to redraw itself, but don't call 
          * on_voice_knob_change(): */
-        g_signal_handlers_block_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
-        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, &callback_data[port]);
         break;
 
       case Y_PORT_TYPE_LOGARITHMIC:
@@ -1502,13 +1514,13 @@ update_voice_widget(int port, float value, int send_OSC)
         else if (cval > 1.0f - 1.0e-6f)
             cval = 1.0f;
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %f\n", ypd->name, value, cval);
-        adj = (GtkAdjustment *)voice_widgets[port].adjustment;
+        adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = cval;
         /* emit "value_changed" to get the widget to redraw itself, but don't call 
          * on_voice_knob_change(): */
-        g_signal_handlers_block_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
-        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, &callback_data[port]);
         break;
 
       case Y_PORT_TYPE_LOGSCALED:
@@ -1519,13 +1531,13 @@ update_voice_widget(int port, float value, int send_OSC)
         else if (cval > 1.0f - 1.0e-6f)
             cval = 1.0f;
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %f\n", ypd->name, value, cval);
-        adj = (GtkAdjustment *)voice_widgets[port].adjustment;
+        adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = cval;
         /* emit "value_changed" to get the widget to redraw itself, but don't call 
          * on_voice_knob_change(): */
-        g_signal_handlers_block_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
-        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, &callback_data[port]);
         break;
 
       case Y_PORT_TYPE_BPLOGSCALED:
@@ -1544,21 +1556,21 @@ update_voice_widget(int port, float value, int send_OSC)
         else if (cval > 1.0f - 1.0e-6f)
             cval = 1.0f;
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %f\n", ypd->name, value, cval);
-        adj = (GtkAdjustment *)voice_widgets[port].adjustment;
+        adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = cval;
         /* emit "value_changed" to get the widget to redraw itself, but don't call 
          * on_voice_knob_change(): */
-        g_signal_handlers_block_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
-        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, (gpointer)port);
+        g_signal_handlers_unblock_by_func(adj, on_voice_knob_change, &callback_data[port]);
         break;
 
       case Y_PORT_TYPE_COMBO:
         dval = lrintf(value);
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of combo '%s' to %f => %d\n", ypd->name, value, dval);
-        widget = voice_widgets[port].widget;
-        combo_set_value(port, dval);  /* does not cause call to on_voice_combo_change() */
-        check_for_layout_update_on_port_change(port);
+        widget = callback_data->voice_widgets[port].widget;
+        combo_set_value(port, dval, callback_data);  /* does not cause call to on_voice_combo_change() */
+        check_for_layout_update_on_port_change(port, callback_data);
         break;
 
       default:
@@ -1566,239 +1578,239 @@ update_voice_widget(int port, float value, int send_OSC)
         break;
     }
 
-    /* if requested, send update to DSSI host */
+    /* if requested, send update to DSSI/LV2 host */
     if (send_OSC)
     {
         if (plugin_mode == Y_DSSI)
             lo_send(osc_host_address, osc_control_path, "if", port, value);
         else if (plugin_mode == Y_LV2)
-            lv2_write_function(lv2_controller, port, sizeof(float), 0, &value);
+            callback_data->lv2_write_function(callback_data->lv2_controller, port, sizeof(float), 0, &value);
     }
 }
 
 void
-update_voice_widgets_from_patch(y_patch_t *patch)
+update_voice_widgets_from_patch(y_patch_t *patch, struct y_ui_callback_data_t* callback_data)
 {
     /* -PORTS- */
-    update_voice_widget(Y_PORT_OSC1_MODE,          (float)patch->osc1.mode,          FALSE);
-    update_voice_widget(Y_PORT_OSC1_WAVEFORM,      (float)patch->osc1.waveform,      FALSE);
-    update_voice_widget(Y_PORT_OSC1_PITCH,         (float)patch->osc1.pitch,         FALSE);
-    update_voice_widget(Y_PORT_OSC1_DETUNE,        patch->osc1.detune,               FALSE);
-    update_voice_widget(Y_PORT_OSC1_PITCH_MOD_SRC, (float)patch->osc1.pitch_mod_src, FALSE);
-    update_voice_widget(Y_PORT_OSC1_PITCH_MOD_AMT, patch->osc1.pitch_mod_amt,        FALSE);
-    update_voice_widget(Y_PORT_OSC1_MPARAM1,       patch->osc1.mparam1,              FALSE);
-    update_voice_widget(Y_PORT_OSC1_MPARAM2,       patch->osc1.mparam2,              FALSE);
-    update_voice_widget(Y_PORT_OSC1_MMOD_SRC,      (float)patch->osc1.mmod_src,      FALSE);
-    update_voice_widget(Y_PORT_OSC1_MMOD_AMT,      patch->osc1.mmod_amt,             FALSE);
-    update_voice_widget(Y_PORT_OSC1_AMP_MOD_SRC,   (float)patch->osc1.amp_mod_src,   FALSE);
-    update_voice_widget(Y_PORT_OSC1_AMP_MOD_AMT,   patch->osc1.amp_mod_amt,          FALSE);
-    update_voice_widget(Y_PORT_OSC1_LEVEL_A,       patch->osc1.level_a,              FALSE);
-    update_voice_widget(Y_PORT_OSC1_LEVEL_B,       patch->osc1.level_b,              FALSE);
+    update_voice_widget(Y_PORT_OSC1_MODE,          (float)patch->osc1.mode,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_WAVEFORM,      (float)patch->osc1.waveform,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_PITCH,         (float)patch->osc1.pitch,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_DETUNE,        patch->osc1.detune,               FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_PITCH_MOD_SRC, (float)patch->osc1.pitch_mod_src, FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_PITCH_MOD_AMT, patch->osc1.pitch_mod_amt,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_MPARAM1,       patch->osc1.mparam1,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_MPARAM2,       patch->osc1.mparam2,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_MMOD_SRC,      (float)patch->osc1.mmod_src,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_MMOD_AMT,      patch->osc1.mmod_amt,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_AMP_MOD_SRC,   (float)patch->osc1.amp_mod_src,   FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_AMP_MOD_AMT,   patch->osc1.amp_mod_amt,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_LEVEL_A,       patch->osc1.level_a,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC1_LEVEL_B,       patch->osc1.level_b,              FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_OSC2_MODE,          (float)patch->osc2.mode,          FALSE);
-    update_voice_widget(Y_PORT_OSC2_WAVEFORM,      (float)patch->osc2.waveform,      FALSE);
-    update_voice_widget(Y_PORT_OSC2_PITCH,         (float)patch->osc2.pitch,         FALSE);
-    update_voice_widget(Y_PORT_OSC2_DETUNE,        patch->osc2.detune,               FALSE);
-    update_voice_widget(Y_PORT_OSC2_PITCH_MOD_SRC, (float)patch->osc2.pitch_mod_src, FALSE);
-    update_voice_widget(Y_PORT_OSC2_PITCH_MOD_AMT, patch->osc2.pitch_mod_amt,        FALSE);
-    update_voice_widget(Y_PORT_OSC2_MPARAM1,       patch->osc2.mparam1,              FALSE);
-    update_voice_widget(Y_PORT_OSC2_MPARAM2,       patch->osc2.mparam2,              FALSE);
-    update_voice_widget(Y_PORT_OSC2_MMOD_SRC,      (float)patch->osc2.mmod_src,      FALSE);
-    update_voice_widget(Y_PORT_OSC2_MMOD_AMT,      patch->osc2.mmod_amt,             FALSE);
-    update_voice_widget(Y_PORT_OSC2_AMP_MOD_SRC,   (float)patch->osc2.amp_mod_src,   FALSE);
-    update_voice_widget(Y_PORT_OSC2_AMP_MOD_AMT,   patch->osc2.amp_mod_amt,          FALSE);
-    update_voice_widget(Y_PORT_OSC2_LEVEL_A,       patch->osc2.level_a,              FALSE);
-    update_voice_widget(Y_PORT_OSC2_LEVEL_B,       patch->osc2.level_b,              FALSE);
+    update_voice_widget(Y_PORT_OSC2_MODE,          (float)patch->osc2.mode,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_WAVEFORM,      (float)patch->osc2.waveform,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_PITCH,         (float)patch->osc2.pitch,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_DETUNE,        patch->osc2.detune,               FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_PITCH_MOD_SRC, (float)patch->osc2.pitch_mod_src, FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_PITCH_MOD_AMT, patch->osc2.pitch_mod_amt,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_MPARAM1,       patch->osc2.mparam1,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_MPARAM2,       patch->osc2.mparam2,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_MMOD_SRC,      (float)patch->osc2.mmod_src,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_MMOD_AMT,      patch->osc2.mmod_amt,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_AMP_MOD_SRC,   (float)patch->osc2.amp_mod_src,   FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_AMP_MOD_AMT,   patch->osc2.amp_mod_amt,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_LEVEL_A,       patch->osc2.level_a,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC2_LEVEL_B,       patch->osc2.level_b,              FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_OSC3_MODE,          (float)patch->osc3.mode,          FALSE);
-    update_voice_widget(Y_PORT_OSC3_WAVEFORM,      (float)patch->osc3.waveform,      FALSE);
-    update_voice_widget(Y_PORT_OSC3_PITCH,         (float)patch->osc3.pitch,         FALSE);
-    update_voice_widget(Y_PORT_OSC3_DETUNE,        patch->osc3.detune,               FALSE);
-    update_voice_widget(Y_PORT_OSC3_PITCH_MOD_SRC, (float)patch->osc3.pitch_mod_src, FALSE);
-    update_voice_widget(Y_PORT_OSC3_PITCH_MOD_AMT, patch->osc3.pitch_mod_amt,        FALSE);
-    update_voice_widget(Y_PORT_OSC3_MPARAM1,       patch->osc3.mparam1,              FALSE);
-    update_voice_widget(Y_PORT_OSC3_MPARAM2,       patch->osc3.mparam2,              FALSE);
-    update_voice_widget(Y_PORT_OSC3_MMOD_SRC,      (float)patch->osc3.mmod_src,      FALSE);
-    update_voice_widget(Y_PORT_OSC3_MMOD_AMT,      patch->osc3.mmod_amt,             FALSE);
-    update_voice_widget(Y_PORT_OSC3_AMP_MOD_SRC,   (float)patch->osc3.amp_mod_src,   FALSE);
-    update_voice_widget(Y_PORT_OSC3_AMP_MOD_AMT,   patch->osc3.amp_mod_amt,          FALSE);
-    update_voice_widget(Y_PORT_OSC3_LEVEL_A,       patch->osc3.level_a,              FALSE);
-    update_voice_widget(Y_PORT_OSC3_LEVEL_B,       patch->osc3.level_b,              FALSE);
+    update_voice_widget(Y_PORT_OSC3_MODE,          (float)patch->osc3.mode,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_WAVEFORM,      (float)patch->osc3.waveform,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_PITCH,         (float)patch->osc3.pitch,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_DETUNE,        patch->osc3.detune,               FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_PITCH_MOD_SRC, (float)patch->osc3.pitch_mod_src, FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_PITCH_MOD_AMT, patch->osc3.pitch_mod_amt,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_MPARAM1,       patch->osc3.mparam1,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_MPARAM2,       patch->osc3.mparam2,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_MMOD_SRC,      (float)patch->osc3.mmod_src,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_MMOD_AMT,      patch->osc3.mmod_amt,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_AMP_MOD_SRC,   (float)patch->osc3.amp_mod_src,   FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_AMP_MOD_AMT,   patch->osc3.amp_mod_amt,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_LEVEL_A,       patch->osc3.level_a,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC3_LEVEL_B,       patch->osc3.level_b,              FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_OSC4_MODE,          (float)patch->osc4.mode,          FALSE);
-    update_voice_widget(Y_PORT_OSC4_WAVEFORM,      (float)patch->osc4.waveform,      FALSE);
-    update_voice_widget(Y_PORT_OSC4_PITCH,         (float)patch->osc4.pitch,         FALSE);
-    update_voice_widget(Y_PORT_OSC4_DETUNE,        patch->osc4.detune,               FALSE);
-    update_voice_widget(Y_PORT_OSC4_PITCH_MOD_SRC, (float)patch->osc4.pitch_mod_src, FALSE);
-    update_voice_widget(Y_PORT_OSC4_PITCH_MOD_AMT, patch->osc4.pitch_mod_amt,        FALSE);
-    update_voice_widget(Y_PORT_OSC4_MPARAM1,       patch->osc4.mparam1,              FALSE);
-    update_voice_widget(Y_PORT_OSC4_MPARAM2,       patch->osc4.mparam2,              FALSE);
-    update_voice_widget(Y_PORT_OSC4_MMOD_SRC,      (float)patch->osc4.mmod_src,      FALSE);
-    update_voice_widget(Y_PORT_OSC4_MMOD_AMT,      patch->osc4.mmod_amt,             FALSE);
-    update_voice_widget(Y_PORT_OSC4_AMP_MOD_SRC,   (float)patch->osc4.amp_mod_src,   FALSE);
-    update_voice_widget(Y_PORT_OSC4_AMP_MOD_AMT,   patch->osc4.amp_mod_amt,          FALSE);
-    update_voice_widget(Y_PORT_OSC4_LEVEL_A,       patch->osc4.level_a,              FALSE);
-    update_voice_widget(Y_PORT_OSC4_LEVEL_B,       patch->osc4.level_b,              FALSE);
+    update_voice_widget(Y_PORT_OSC4_MODE,          (float)patch->osc4.mode,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_WAVEFORM,      (float)patch->osc4.waveform,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_PITCH,         (float)patch->osc4.pitch,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_DETUNE,        patch->osc4.detune,               FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_PITCH_MOD_SRC, (float)patch->osc4.pitch_mod_src, FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_PITCH_MOD_AMT, patch->osc4.pitch_mod_amt,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_MPARAM1,       patch->osc4.mparam1,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_MPARAM2,       patch->osc4.mparam2,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_MMOD_SRC,      (float)patch->osc4.mmod_src,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_MMOD_AMT,      patch->osc4.mmod_amt,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_AMP_MOD_SRC,   (float)patch->osc4.amp_mod_src,   FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_AMP_MOD_AMT,   patch->osc4.amp_mod_amt,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_LEVEL_A,       patch->osc4.level_a,              FALSE, callback_data);
+    update_voice_widget(Y_PORT_OSC4_LEVEL_B,       patch->osc4.level_b,              FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_VCF1_MODE,          (float)patch->vcf1.mode,          FALSE);
-    update_voice_widget(Y_PORT_VCF1_SOURCE,        (float)patch->vcf1.source,        FALSE);
-    update_voice_widget(Y_PORT_VCF1_FREQUENCY,     patch->vcf1.frequency,            FALSE);
-    update_voice_widget(Y_PORT_VCF1_FREQ_MOD_SRC,  (float)patch->vcf1.freq_mod_src,  FALSE);
-    update_voice_widget(Y_PORT_VCF1_FREQ_MOD_AMT,  patch->vcf1.freq_mod_amt,         FALSE);
-    update_voice_widget(Y_PORT_VCF1_QRES,          patch->vcf1.qres,                 FALSE);
-    update_voice_widget(Y_PORT_VCF1_MPARAM,        patch->vcf1.mparam,               FALSE);
+    update_voice_widget(Y_PORT_VCF1_MODE,          (float)patch->vcf1.mode,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_SOURCE,        (float)patch->vcf1.source,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_FREQUENCY,     patch->vcf1.frequency,            FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_FREQ_MOD_SRC,  (float)patch->vcf1.freq_mod_src,  FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_FREQ_MOD_AMT,  patch->vcf1.freq_mod_amt,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_QRES,          patch->vcf1.qres,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_MPARAM,        patch->vcf1.mparam,               FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_VCF2_MODE,          (float)patch->vcf2.mode,          FALSE);
-    update_voice_widget(Y_PORT_VCF2_SOURCE,        (float)patch->vcf2.source,        FALSE);
-    update_voice_widget(Y_PORT_VCF2_FREQUENCY,     patch->vcf2.frequency,            FALSE);
-    update_voice_widget(Y_PORT_VCF2_FREQ_MOD_SRC,  (float)patch->vcf2.freq_mod_src,  FALSE);
-    update_voice_widget(Y_PORT_VCF2_FREQ_MOD_AMT,  patch->vcf2.freq_mod_amt,         FALSE);
-    update_voice_widget(Y_PORT_VCF2_QRES,          patch->vcf2.qres,                 FALSE);
-    update_voice_widget(Y_PORT_VCF2_MPARAM,        patch->vcf2.mparam,               FALSE);
+    update_voice_widget(Y_PORT_VCF2_MODE,          (float)patch->vcf2.mode,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_SOURCE,        (float)patch->vcf2.source,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_FREQUENCY,     patch->vcf2.frequency,            FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_FREQ_MOD_SRC,  (float)patch->vcf2.freq_mod_src,  FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_FREQ_MOD_AMT,  patch->vcf2.freq_mod_amt,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_QRES,          patch->vcf2.qres,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_MPARAM,        patch->vcf2.mparam,               FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_BUSA_LEVEL,         patch->busa_level,                FALSE);
-    update_voice_widget(Y_PORT_BUSA_PAN,           patch->busa_pan,                  FALSE);
-    update_voice_widget(Y_PORT_BUSB_LEVEL,         patch->busb_level,                FALSE);
-    update_voice_widget(Y_PORT_BUSB_PAN,           patch->busb_pan,                  FALSE);
-    update_voice_widget(Y_PORT_VCF1_LEVEL,         patch->vcf1_level,                FALSE);
-    update_voice_widget(Y_PORT_VCF1_PAN,           patch->vcf1_pan,                  FALSE);
-    update_voice_widget(Y_PORT_VCF2_LEVEL,         patch->vcf2_level,                FALSE);
-    update_voice_widget(Y_PORT_VCF2_PAN,           patch->vcf2_pan,                  FALSE);
-    update_voice_widget(Y_PORT_VOLUME,             patch->volume,                    FALSE);
+    update_voice_widget(Y_PORT_BUSA_LEVEL,         patch->busa_level,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_BUSA_PAN,           patch->busa_pan,                  FALSE, callback_data);
+    update_voice_widget(Y_PORT_BUSB_LEVEL,         patch->busb_level,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_BUSB_PAN,           patch->busb_pan,                  FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_LEVEL,         patch->vcf1_level,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF1_PAN,           patch->vcf1_pan,                  FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_LEVEL,         patch->vcf2_level,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_VCF2_PAN,           patch->vcf2_pan,                  FALSE, callback_data);
+    update_voice_widget(Y_PORT_VOLUME,             patch->volume,                    FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_EFFECT_MODE,        (float)patch->effect_mode,        FALSE);
-    update_voice_widget(Y_PORT_EFFECT_PARAM1,      patch->effect_param1,             FALSE);
-    update_voice_widget(Y_PORT_EFFECT_PARAM2,      patch->effect_param2,             FALSE);
-    update_voice_widget(Y_PORT_EFFECT_PARAM3,      patch->effect_param3,             FALSE);
-    update_voice_widget(Y_PORT_EFFECT_PARAM4,      patch->effect_param4,             FALSE);
-    update_voice_widget(Y_PORT_EFFECT_PARAM5,      patch->effect_param5,             FALSE);
-    update_voice_widget(Y_PORT_EFFECT_PARAM6,      patch->effect_param6,             FALSE);
-    update_voice_widget(Y_PORT_EFFECT_MIX,         patch->effect_mix,                FALSE);
+    update_voice_widget(Y_PORT_EFFECT_MODE,        (float)patch->effect_mode,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EFFECT_PARAM1,      patch->effect_param1,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_EFFECT_PARAM2,      patch->effect_param2,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_EFFECT_PARAM3,      patch->effect_param3,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_EFFECT_PARAM4,      patch->effect_param4,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_EFFECT_PARAM5,      patch->effect_param5,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_EFFECT_PARAM6,      patch->effect_param6,             FALSE, callback_data);
+    update_voice_widget(Y_PORT_EFFECT_MIX,         patch->effect_mix,                FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_GLIDE_TIME,         patch->glide_time,                FALSE);
-    update_voice_widget(Y_PORT_BEND_RANGE,         (float)patch->bend_range,         FALSE);
+    update_voice_widget(Y_PORT_GLIDE_TIME,         patch->glide_time,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_BEND_RANGE,         (float)patch->bend_range,         FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_GLFO_FREQUENCY,     patch->glfo.frequency,            FALSE);
-    update_voice_widget(Y_PORT_GLFO_WAVEFORM,      (float)patch->glfo.waveform,      FALSE);
-    update_voice_widget(Y_PORT_GLFO_AMP_MOD_SRC,   (float)patch->glfo.amp_mod_src,   FALSE);
-    update_voice_widget(Y_PORT_GLFO_AMP_MOD_AMT,   patch->glfo.amp_mod_amt,          FALSE);
+    update_voice_widget(Y_PORT_GLFO_FREQUENCY,     patch->glfo.frequency,            FALSE, callback_data);
+    update_voice_widget(Y_PORT_GLFO_WAVEFORM,      (float)patch->glfo.waveform,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_GLFO_AMP_MOD_SRC,   (float)patch->glfo.amp_mod_src,   FALSE, callback_data);
+    update_voice_widget(Y_PORT_GLFO_AMP_MOD_AMT,   patch->glfo.amp_mod_amt,          FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_VLFO_FREQUENCY,     patch->vlfo.frequency,            FALSE);
-    update_voice_widget(Y_PORT_VLFO_WAVEFORM,      (float)patch->vlfo.waveform,      FALSE);
-    update_voice_widget(Y_PORT_VLFO_DELAY,         patch->vlfo.delay,                FALSE);
-    update_voice_widget(Y_PORT_VLFO_AMP_MOD_SRC,   (float)patch->vlfo.amp_mod_src,   FALSE);
-    update_voice_widget(Y_PORT_VLFO_AMP_MOD_AMT,   patch->vlfo.amp_mod_amt,          FALSE);
+    update_voice_widget(Y_PORT_VLFO_FREQUENCY,     patch->vlfo.frequency,            FALSE, callback_data);
+    update_voice_widget(Y_PORT_VLFO_WAVEFORM,      (float)patch->vlfo.waveform,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_VLFO_DELAY,         patch->vlfo.delay,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_VLFO_AMP_MOD_SRC,   (float)patch->vlfo.amp_mod_src,   FALSE, callback_data);
+    update_voice_widget(Y_PORT_VLFO_AMP_MOD_AMT,   patch->vlfo.amp_mod_amt,          FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_MLFO_FREQUENCY,     patch->mlfo.frequency,            FALSE);
-    update_voice_widget(Y_PORT_MLFO_WAVEFORM,      (float)patch->mlfo.waveform,      FALSE);
-    update_voice_widget(Y_PORT_MLFO_DELAY,         patch->mlfo.delay,                FALSE);
-    update_voice_widget(Y_PORT_MLFO_AMP_MOD_SRC,   (float)patch->mlfo.amp_mod_src,   FALSE);
-    update_voice_widget(Y_PORT_MLFO_AMP_MOD_AMT,   patch->mlfo.amp_mod_amt,          FALSE);
-    update_voice_widget(Y_PORT_MLFO_PHASE_SPREAD,  patch->mlfo_phase_spread,         FALSE);
-    update_voice_widget(Y_PORT_MLFO_RANDOM_FREQ,   patch->mlfo_random_freq,          FALSE);
+    update_voice_widget(Y_PORT_MLFO_FREQUENCY,     patch->mlfo.frequency,            FALSE, callback_data);
+    update_voice_widget(Y_PORT_MLFO_WAVEFORM,      (float)patch->mlfo.waveform,      FALSE, callback_data);
+    update_voice_widget(Y_PORT_MLFO_DELAY,         patch->mlfo.delay,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_MLFO_AMP_MOD_SRC,   (float)patch->mlfo.amp_mod_src,   FALSE, callback_data);
+    update_voice_widget(Y_PORT_MLFO_AMP_MOD_AMT,   patch->mlfo.amp_mod_amt,          FALSE, callback_data);
+    update_voice_widget(Y_PORT_MLFO_PHASE_SPREAD,  patch->mlfo_phase_spread,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_MLFO_RANDOM_FREQ,   patch->mlfo_random_freq,          FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_EGO_MODE,           (float)patch->ego.mode,           FALSE);
-    update_voice_widget(Y_PORT_EGO_SHAPE1,         (float)patch->ego.shape1,         FALSE);
-    update_voice_widget(Y_PORT_EGO_TIME1,          patch->ego.time1,                 FALSE);
-    update_voice_widget(Y_PORT_EGO_LEVEL1,         patch->ego.level1,                FALSE);
-    update_voice_widget(Y_PORT_EGO_SHAPE2,         (float)patch->ego.shape2,         FALSE);
-    update_voice_widget(Y_PORT_EGO_TIME2,          patch->ego.time2,                 FALSE);
-    update_voice_widget(Y_PORT_EGO_LEVEL2,         patch->ego.level2,                FALSE);
-    update_voice_widget(Y_PORT_EGO_SHAPE3,         (float)patch->ego.shape3,         FALSE);
-    update_voice_widget(Y_PORT_EGO_TIME3,          patch->ego.time3,                 FALSE);
-    update_voice_widget(Y_PORT_EGO_LEVEL3,         patch->ego.level3,                FALSE);
-    update_voice_widget(Y_PORT_EGO_SHAPE4,         (float)patch->ego.shape4,         FALSE);
-    update_voice_widget(Y_PORT_EGO_TIME4,          patch->ego.time4,                 FALSE);
-    update_voice_widget(Y_PORT_EGO_VEL_LEVEL_SENS, patch->ego.vel_level_sens,        FALSE);
-    update_voice_widget(Y_PORT_EGO_VEL_TIME_SCALE, patch->ego.vel_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EGO_KBD_TIME_SCALE, patch->ego.kbd_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EGO_AMP_MOD_SRC,    (float)patch->ego.amp_mod_src,    FALSE);
-    update_voice_widget(Y_PORT_EGO_AMP_MOD_AMT,    patch->ego.amp_mod_amt,           FALSE);
+    update_voice_widget(Y_PORT_EGO_MODE,           (float)patch->ego.mode,           FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_SHAPE1,         (float)patch->ego.shape1,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_TIME1,          patch->ego.time1,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_LEVEL1,         patch->ego.level1,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_SHAPE2,         (float)patch->ego.shape2,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_TIME2,          patch->ego.time2,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_LEVEL2,         patch->ego.level2,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_SHAPE3,         (float)patch->ego.shape3,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_TIME3,          patch->ego.time3,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_LEVEL3,         patch->ego.level3,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_SHAPE4,         (float)patch->ego.shape4,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_TIME4,          patch->ego.time4,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_VEL_LEVEL_SENS, patch->ego.vel_level_sens,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_VEL_TIME_SCALE, patch->ego.vel_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_KBD_TIME_SCALE, patch->ego.kbd_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_AMP_MOD_SRC,    (float)patch->ego.amp_mod_src,    FALSE, callback_data);
+    update_voice_widget(Y_PORT_EGO_AMP_MOD_AMT,    patch->ego.amp_mod_amt,           FALSE, callback_data);
                                                                                         
-    update_voice_widget(Y_PORT_EG1_MODE,           (float)patch->eg1.mode,           FALSE);
-    update_voice_widget(Y_PORT_EG1_SHAPE1,         (float)patch->eg1.shape1,         FALSE);
-    update_voice_widget(Y_PORT_EG1_TIME1,          patch->eg1.time1,                 FALSE);
-    update_voice_widget(Y_PORT_EG1_LEVEL1,         patch->eg1.level1,                FALSE);
-    update_voice_widget(Y_PORT_EG1_SHAPE2,         (float)patch->eg1.shape2,         FALSE);
-    update_voice_widget(Y_PORT_EG1_TIME2,          patch->eg1.time2,                 FALSE);
-    update_voice_widget(Y_PORT_EG1_LEVEL2,         patch->eg1.level2,                FALSE);
-    update_voice_widget(Y_PORT_EG1_SHAPE3,         (float)patch->eg1.shape3,         FALSE);
-    update_voice_widget(Y_PORT_EG1_TIME3,          patch->eg1.time3,                 FALSE);
-    update_voice_widget(Y_PORT_EG1_LEVEL3,         patch->eg1.level3,                FALSE);
-    update_voice_widget(Y_PORT_EG1_SHAPE4,         (float)patch->eg1.shape4,         FALSE);
-    update_voice_widget(Y_PORT_EG1_TIME4,          patch->eg1.time4,                 FALSE);
-    update_voice_widget(Y_PORT_EG1_VEL_LEVEL_SENS, patch->eg1.vel_level_sens,        FALSE);
-    update_voice_widget(Y_PORT_EG1_VEL_TIME_SCALE, patch->eg1.vel_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG1_KBD_TIME_SCALE, patch->eg1.kbd_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG1_AMP_MOD_SRC,    (float)patch->eg1.amp_mod_src,    FALSE);
-    update_voice_widget(Y_PORT_EG1_AMP_MOD_AMT,    patch->eg1.amp_mod_amt,           FALSE);
+    update_voice_widget(Y_PORT_EG1_MODE,           (float)patch->eg1.mode,           FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_SHAPE1,         (float)patch->eg1.shape1,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_TIME1,          patch->eg1.time1,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_LEVEL1,         patch->eg1.level1,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_SHAPE2,         (float)patch->eg1.shape2,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_TIME2,          patch->eg1.time2,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_LEVEL2,         patch->eg1.level2,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_SHAPE3,         (float)patch->eg1.shape3,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_TIME3,          patch->eg1.time3,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_LEVEL3,         patch->eg1.level3,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_SHAPE4,         (float)patch->eg1.shape4,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_TIME4,          patch->eg1.time4,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_VEL_LEVEL_SENS, patch->eg1.vel_level_sens,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_VEL_TIME_SCALE, patch->eg1.vel_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_KBD_TIME_SCALE, patch->eg1.kbd_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_AMP_MOD_SRC,    (float)patch->eg1.amp_mod_src,    FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG1_AMP_MOD_AMT,    patch->eg1.amp_mod_amt,           FALSE, callback_data);
                                                                                         
-    update_voice_widget(Y_PORT_EG2_MODE,           (float)patch->eg2.mode,           FALSE);
-    update_voice_widget(Y_PORT_EG2_SHAPE1,         (float)patch->eg2.shape1,         FALSE);
-    update_voice_widget(Y_PORT_EG2_TIME1,          patch->eg2.time1,                 FALSE);
-    update_voice_widget(Y_PORT_EG2_LEVEL1,         patch->eg2.level1,                FALSE);
-    update_voice_widget(Y_PORT_EG2_SHAPE2,         (float)patch->eg2.shape2,         FALSE);
-    update_voice_widget(Y_PORT_EG2_TIME2,          patch->eg2.time2,                 FALSE);
-    update_voice_widget(Y_PORT_EG2_LEVEL2,         patch->eg2.level2,                FALSE);
-    update_voice_widget(Y_PORT_EG2_SHAPE3,         (float)patch->eg2.shape3,         FALSE);
-    update_voice_widget(Y_PORT_EG2_TIME3,          patch->eg2.time3,                 FALSE);
-    update_voice_widget(Y_PORT_EG2_LEVEL3,         patch->eg2.level3,                FALSE);
-    update_voice_widget(Y_PORT_EG2_SHAPE4,         (float)patch->eg2.shape4,         FALSE);
-    update_voice_widget(Y_PORT_EG2_TIME4,          patch->eg2.time4,                 FALSE);
-    update_voice_widget(Y_PORT_EG2_VEL_LEVEL_SENS, patch->eg2.vel_level_sens,        FALSE);
-    update_voice_widget(Y_PORT_EG2_VEL_TIME_SCALE, patch->eg2.vel_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG2_KBD_TIME_SCALE, patch->eg2.kbd_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG2_AMP_MOD_SRC,    (float)patch->eg2.amp_mod_src,    FALSE);
-    update_voice_widget(Y_PORT_EG2_AMP_MOD_AMT,    patch->eg2.amp_mod_amt,           FALSE);
+    update_voice_widget(Y_PORT_EG2_MODE,           (float)patch->eg2.mode,           FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_SHAPE1,         (float)patch->eg2.shape1,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_TIME1,          patch->eg2.time1,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_LEVEL1,         patch->eg2.level1,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_SHAPE2,         (float)patch->eg2.shape2,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_TIME2,          patch->eg2.time2,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_LEVEL2,         patch->eg2.level2,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_SHAPE3,         (float)patch->eg2.shape3,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_TIME3,          patch->eg2.time3,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_LEVEL3,         patch->eg2.level3,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_SHAPE4,         (float)patch->eg2.shape4,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_TIME4,          patch->eg2.time4,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_VEL_LEVEL_SENS, patch->eg2.vel_level_sens,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_VEL_TIME_SCALE, patch->eg2.vel_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_KBD_TIME_SCALE, patch->eg2.kbd_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_AMP_MOD_SRC,    (float)patch->eg2.amp_mod_src,    FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG2_AMP_MOD_AMT,    patch->eg2.amp_mod_amt,           FALSE, callback_data);
                                                                                         
-    update_voice_widget(Y_PORT_EG3_MODE,           (float)patch->eg3.mode,           FALSE);
-    update_voice_widget(Y_PORT_EG3_SHAPE1,         (float)patch->eg3.shape1,         FALSE);
-    update_voice_widget(Y_PORT_EG3_TIME1,          patch->eg3.time1,                 FALSE);
-    update_voice_widget(Y_PORT_EG3_LEVEL1,         patch->eg3.level1,                FALSE);
-    update_voice_widget(Y_PORT_EG3_SHAPE2,         (float)patch->eg3.shape2,         FALSE);
-    update_voice_widget(Y_PORT_EG3_TIME2,          patch->eg3.time2,                 FALSE);
-    update_voice_widget(Y_PORT_EG3_LEVEL2,         patch->eg3.level2,                FALSE);
-    update_voice_widget(Y_PORT_EG3_SHAPE3,         (float)patch->eg3.shape3,         FALSE);
-    update_voice_widget(Y_PORT_EG3_TIME3,          patch->eg3.time3,                 FALSE);
-    update_voice_widget(Y_PORT_EG3_LEVEL3,         patch->eg3.level3,                FALSE);
-    update_voice_widget(Y_PORT_EG3_SHAPE4,         (float)patch->eg3.shape4,         FALSE);
-    update_voice_widget(Y_PORT_EG3_TIME4,          patch->eg3.time4,                 FALSE);
-    update_voice_widget(Y_PORT_EG3_VEL_LEVEL_SENS, patch->eg3.vel_level_sens,        FALSE);
-    update_voice_widget(Y_PORT_EG3_VEL_TIME_SCALE, patch->eg3.vel_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG3_KBD_TIME_SCALE, patch->eg3.kbd_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG3_AMP_MOD_SRC,    (float)patch->eg3.amp_mod_src,    FALSE);
-    update_voice_widget(Y_PORT_EG3_AMP_MOD_AMT,    patch->eg3.amp_mod_amt,           FALSE);
+    update_voice_widget(Y_PORT_EG3_MODE,           (float)patch->eg3.mode,           FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_SHAPE1,         (float)patch->eg3.shape1,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_TIME1,          patch->eg3.time1,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_LEVEL1,         patch->eg3.level1,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_SHAPE2,         (float)patch->eg3.shape2,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_TIME2,          patch->eg3.time2,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_LEVEL2,         patch->eg3.level2,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_SHAPE3,         (float)patch->eg3.shape3,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_TIME3,          patch->eg3.time3,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_LEVEL3,         patch->eg3.level3,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_SHAPE4,         (float)patch->eg3.shape4,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_TIME4,          patch->eg3.time4,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_VEL_LEVEL_SENS, patch->eg3.vel_level_sens,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_VEL_TIME_SCALE, patch->eg3.vel_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_KBD_TIME_SCALE, patch->eg3.kbd_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_AMP_MOD_SRC,    (float)patch->eg3.amp_mod_src,    FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG3_AMP_MOD_AMT,    patch->eg3.amp_mod_amt,           FALSE, callback_data);
                                                                                         
-    update_voice_widget(Y_PORT_EG4_MODE,           (float)patch->eg4.mode,           FALSE);
-    update_voice_widget(Y_PORT_EG4_SHAPE1,         (float)patch->eg4.shape1,         FALSE);
-    update_voice_widget(Y_PORT_EG4_TIME1,          patch->eg4.time1,                 FALSE);
-    update_voice_widget(Y_PORT_EG4_LEVEL1,         patch->eg4.level1,                FALSE);
-    update_voice_widget(Y_PORT_EG4_SHAPE2,         (float)patch->eg4.shape2,         FALSE);
-    update_voice_widget(Y_PORT_EG4_TIME2,          patch->eg4.time2,                 FALSE);
-    update_voice_widget(Y_PORT_EG4_LEVEL2,         patch->eg4.level2,                FALSE);
-    update_voice_widget(Y_PORT_EG4_SHAPE3,         (float)patch->eg4.shape3,         FALSE);
-    update_voice_widget(Y_PORT_EG4_TIME3,          patch->eg4.time3,                 FALSE);
-    update_voice_widget(Y_PORT_EG4_LEVEL3,         patch->eg4.level3,                FALSE);
-    update_voice_widget(Y_PORT_EG4_SHAPE4,         (float)patch->eg4.shape4,         FALSE);
-    update_voice_widget(Y_PORT_EG4_TIME4,          patch->eg4.time4,                 FALSE);
-    update_voice_widget(Y_PORT_EG4_VEL_LEVEL_SENS, patch->eg4.vel_level_sens,        FALSE);
-    update_voice_widget(Y_PORT_EG4_VEL_TIME_SCALE, patch->eg4.vel_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG4_KBD_TIME_SCALE, patch->eg4.kbd_time_scale,        FALSE);
-    update_voice_widget(Y_PORT_EG4_AMP_MOD_SRC,    (float)patch->eg4.amp_mod_src,    FALSE);
-    update_voice_widget(Y_PORT_EG4_AMP_MOD_AMT,    patch->eg4.amp_mod_amt,           FALSE);
+    update_voice_widget(Y_PORT_EG4_MODE,           (float)patch->eg4.mode,           FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_SHAPE1,         (float)patch->eg4.shape1,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_TIME1,          patch->eg4.time1,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_LEVEL1,         patch->eg4.level1,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_SHAPE2,         (float)patch->eg4.shape2,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_TIME2,          patch->eg4.time2,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_LEVEL2,         patch->eg4.level2,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_SHAPE3,         (float)patch->eg4.shape3,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_TIME3,          patch->eg4.time3,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_LEVEL3,         patch->eg4.level3,                FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_SHAPE4,         (float)patch->eg4.shape4,         FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_TIME4,          patch->eg4.time4,                 FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_VEL_LEVEL_SENS, patch->eg4.vel_level_sens,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_VEL_TIME_SCALE, patch->eg4.vel_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_KBD_TIME_SCALE, patch->eg4.kbd_time_scale,        FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_AMP_MOD_SRC,    (float)patch->eg4.amp_mod_src,    FALSE, callback_data);
+    update_voice_widget(Y_PORT_EG4_AMP_MOD_AMT,    patch->eg4.amp_mod_amt,           FALSE, callback_data);
 
-    update_voice_widget(Y_PORT_MODMIX_BIAS,        patch->modmix_bias,               FALSE);
-    update_voice_widget(Y_PORT_MODMIX_MOD1_SRC,    (float)patch->modmix_mod1_src,    FALSE);
-    update_voice_widget(Y_PORT_MODMIX_MOD1_AMT,    patch->modmix_mod1_amt,           FALSE);
-    update_voice_widget(Y_PORT_MODMIX_MOD2_SRC,    (float)patch->modmix_mod2_src,    FALSE);
-    update_voice_widget(Y_PORT_MODMIX_MOD2_AMT,    patch->modmix_mod2_amt,           FALSE);
+    update_voice_widget(Y_PORT_MODMIX_BIAS,        patch->modmix_bias,               FALSE, callback_data);
+    update_voice_widget(Y_PORT_MODMIX_MOD1_SRC,    (float)patch->modmix_mod1_src,    FALSE, callback_data);
+    update_voice_widget(Y_PORT_MODMIX_MOD1_AMT,    patch->modmix_mod1_amt,           FALSE, callback_data);
+    update_voice_widget(Y_PORT_MODMIX_MOD2_SRC,    (float)patch->modmix_mod2_src,    FALSE, callback_data);
+    update_voice_widget(Y_PORT_MODMIX_MOD2_AMT,    patch->modmix_mod2_amt,           FALSE, callback_data);
 
     gtk_entry_set_text(GTK_ENTRY(name_entry), patch->name);
     gtk_entry_set_text(GTK_ENTRY(comment_entry), patch->comment);
 }
 
 void
-update_from_program_select(int program)
+update_from_program_select(int program, struct y_ui_callback_data_t* callback_data)
 {
     if (program < patch_count) {
 
@@ -1807,7 +1819,7 @@ update_from_program_select(int program)
         gtk_clist_select_row (GTK_CLIST(patches_clist), program, 0);
         g_signal_handlers_unblock_by_func(patches_clist, on_patches_selection, NULL);
 
-        update_voice_widgets_from_patch(&patches[program]);
+        update_voice_widgets_from_patch(&patches[program], callback_data);
 
     } else {  /* out of range */
 
@@ -1817,7 +1829,7 @@ update_from_program_select(int program)
 }
 
 float
-get_value_from_knob(int index)
+get_value_from_knob(int index, struct voice_widgets* voice_widgets)
 {
     struct y_port_descriptor *ypd = &y_port_description[index];
     float value = GTK_ADJUSTMENT(voice_widgets[index].adjustment)->value;
@@ -1851,15 +1863,15 @@ get_value_from_knob(int index)
 }
 
 int
-get_value_from_detent(int index)
+get_value_from_detent(int index, struct voice_widgets* voice_widgets)
 {
     return lrintf(GTK_ADJUSTMENT(voice_widgets[index].adjustment)->value);
 }
 
 int
-get_value_from_combo(int index)
+get_value_from_combo(int index, struct voice_widgets* voice_widgets)
 {
-    return combo_get_value(index);
+    return combo_get_value(index, voice_widgets);
 }
 
 // static int
@@ -1869,224 +1881,224 @@ get_value_from_combo(int index)
 // }
 
 void
-update_patch_from_voice_widgets(y_patch_t *patch)
+update_patch_from_voice_widgets(y_patch_t *patch, struct voice_widgets* voice_widgets)
 {
     int i;
 
     /* -PORTS- */
-    patch->osc1.mode          = get_value_from_combo(Y_PORT_OSC1_MODE);
-    patch->osc1.waveform      = get_value_from_combo(Y_PORT_OSC1_WAVEFORM);
-    patch->osc1.pitch         = get_value_from_detent(Y_PORT_OSC1_PITCH);
-    patch->osc1.detune        = get_value_from_knob(Y_PORT_OSC1_DETUNE);
-    patch->osc1.pitch_mod_src = get_value_from_combo(Y_PORT_OSC1_PITCH_MOD_SRC);
-    patch->osc1.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC1_PITCH_MOD_AMT);
-    patch->osc1.mparam1       = get_value_from_knob(Y_PORT_OSC1_MPARAM1);
-    patch->osc1.mparam2       = get_value_from_knob(Y_PORT_OSC1_MPARAM2);
-    patch->osc1.mmod_src      = get_value_from_combo(Y_PORT_OSC1_MMOD_SRC);
-    patch->osc1.mmod_amt      = get_value_from_knob(Y_PORT_OSC1_MMOD_AMT);
-    patch->osc1.amp_mod_src   = get_value_from_combo(Y_PORT_OSC1_AMP_MOD_SRC);
-    patch->osc1.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC1_AMP_MOD_AMT);
-    patch->osc1.level_a       = get_value_from_knob(Y_PORT_OSC1_LEVEL_A);
-    patch->osc1.level_b       = get_value_from_knob(Y_PORT_OSC1_LEVEL_B);
+    patch->osc1.mode          = get_value_from_combo(Y_PORT_OSC1_MODE, voice_widgets);
+    patch->osc1.waveform      = get_value_from_combo(Y_PORT_OSC1_WAVEFORM, voice_widgets);
+    patch->osc1.pitch         = get_value_from_detent(Y_PORT_OSC1_PITCH, voice_widgets);
+    patch->osc1.detune        = get_value_from_knob(Y_PORT_OSC1_DETUNE, voice_widgets);
+    patch->osc1.pitch_mod_src = get_value_from_combo(Y_PORT_OSC1_PITCH_MOD_SRC, voice_widgets);
+    patch->osc1.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC1_PITCH_MOD_AMT, voice_widgets);
+    patch->osc1.mparam1       = get_value_from_knob(Y_PORT_OSC1_MPARAM1, voice_widgets);
+    patch->osc1.mparam2       = get_value_from_knob(Y_PORT_OSC1_MPARAM2, voice_widgets);
+    patch->osc1.mmod_src      = get_value_from_combo(Y_PORT_OSC1_MMOD_SRC, voice_widgets);
+    patch->osc1.mmod_amt      = get_value_from_knob(Y_PORT_OSC1_MMOD_AMT, voice_widgets);
+    patch->osc1.amp_mod_src   = get_value_from_combo(Y_PORT_OSC1_AMP_MOD_SRC, voice_widgets);
+    patch->osc1.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC1_AMP_MOD_AMT, voice_widgets);
+    patch->osc1.level_a       = get_value_from_knob(Y_PORT_OSC1_LEVEL_A, voice_widgets);
+    patch->osc1.level_b       = get_value_from_knob(Y_PORT_OSC1_LEVEL_B, voice_widgets);
 
-    patch->osc2.mode          = get_value_from_combo(Y_PORT_OSC2_MODE);
-    patch->osc2.waveform      = get_value_from_combo(Y_PORT_OSC2_WAVEFORM);
-    patch->osc2.pitch         = get_value_from_detent(Y_PORT_OSC2_PITCH);
-    patch->osc2.detune        = get_value_from_knob(Y_PORT_OSC2_DETUNE);
-    patch->osc2.pitch_mod_src = get_value_from_combo(Y_PORT_OSC2_PITCH_MOD_SRC);
-    patch->osc2.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC2_PITCH_MOD_AMT);
-    patch->osc2.mparam1       = get_value_from_knob(Y_PORT_OSC2_MPARAM1);
-    patch->osc2.mparam2       = get_value_from_knob(Y_PORT_OSC2_MPARAM2);
-    patch->osc2.mmod_src      = get_value_from_combo(Y_PORT_OSC2_MMOD_SRC);
-    patch->osc2.mmod_amt      = get_value_from_knob(Y_PORT_OSC2_MMOD_AMT);
-    patch->osc2.amp_mod_src   = get_value_from_combo(Y_PORT_OSC2_AMP_MOD_SRC);
-    patch->osc2.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC2_AMP_MOD_AMT);
-    patch->osc2.level_a       = get_value_from_knob(Y_PORT_OSC2_LEVEL_A);
-    patch->osc2.level_b       = get_value_from_knob(Y_PORT_OSC2_LEVEL_B);
+    patch->osc2.mode          = get_value_from_combo(Y_PORT_OSC2_MODE, voice_widgets);
+    patch->osc2.waveform      = get_value_from_combo(Y_PORT_OSC2_WAVEFORM, voice_widgets);
+    patch->osc2.pitch         = get_value_from_detent(Y_PORT_OSC2_PITCH, voice_widgets);
+    patch->osc2.detune        = get_value_from_knob(Y_PORT_OSC2_DETUNE, voice_widgets);
+    patch->osc2.pitch_mod_src = get_value_from_combo(Y_PORT_OSC2_PITCH_MOD_SRC, voice_widgets);
+    patch->osc2.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC2_PITCH_MOD_AMT, voice_widgets);
+    patch->osc2.mparam1       = get_value_from_knob(Y_PORT_OSC2_MPARAM1, voice_widgets);
+    patch->osc2.mparam2       = get_value_from_knob(Y_PORT_OSC2_MPARAM2, voice_widgets);
+    patch->osc2.mmod_src      = get_value_from_combo(Y_PORT_OSC2_MMOD_SRC, voice_widgets);
+    patch->osc2.mmod_amt      = get_value_from_knob(Y_PORT_OSC2_MMOD_AMT, voice_widgets);
+    patch->osc2.amp_mod_src   = get_value_from_combo(Y_PORT_OSC2_AMP_MOD_SRC, voice_widgets);
+    patch->osc2.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC2_AMP_MOD_AMT, voice_widgets);
+    patch->osc2.level_a       = get_value_from_knob(Y_PORT_OSC2_LEVEL_A, voice_widgets);
+    patch->osc2.level_b       = get_value_from_knob(Y_PORT_OSC2_LEVEL_B, voice_widgets);
 
-    patch->osc3.mode          = get_value_from_combo(Y_PORT_OSC3_MODE);
-    patch->osc3.waveform      = get_value_from_combo(Y_PORT_OSC3_WAVEFORM);
-    patch->osc3.pitch         = get_value_from_detent(Y_PORT_OSC3_PITCH);
-    patch->osc3.detune        = get_value_from_knob(Y_PORT_OSC3_DETUNE);
-    patch->osc3.pitch_mod_src = get_value_from_combo(Y_PORT_OSC3_PITCH_MOD_SRC);
-    patch->osc3.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC3_PITCH_MOD_AMT);
-    patch->osc3.mparam1       = get_value_from_knob(Y_PORT_OSC3_MPARAM1);
-    patch->osc3.mparam2       = get_value_from_knob(Y_PORT_OSC3_MPARAM2);
-    patch->osc3.mmod_src      = get_value_from_combo(Y_PORT_OSC3_MMOD_SRC);
-    patch->osc3.mmod_amt      = get_value_from_knob(Y_PORT_OSC3_MMOD_AMT);
-    patch->osc3.amp_mod_src   = get_value_from_combo(Y_PORT_OSC3_AMP_MOD_SRC);
-    patch->osc3.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC3_AMP_MOD_AMT);
-    patch->osc3.level_a       = get_value_from_knob(Y_PORT_OSC3_LEVEL_A);
-    patch->osc3.level_b       = get_value_from_knob(Y_PORT_OSC3_LEVEL_B);
+    patch->osc3.mode          = get_value_from_combo(Y_PORT_OSC3_MODE, voice_widgets);
+    patch->osc3.waveform      = get_value_from_combo(Y_PORT_OSC3_WAVEFORM, voice_widgets);
+    patch->osc3.pitch         = get_value_from_detent(Y_PORT_OSC3_PITCH, voice_widgets);
+    patch->osc3.detune        = get_value_from_knob(Y_PORT_OSC3_DETUNE, voice_widgets);
+    patch->osc3.pitch_mod_src = get_value_from_combo(Y_PORT_OSC3_PITCH_MOD_SRC, voice_widgets);
+    patch->osc3.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC3_PITCH_MOD_AMT, voice_widgets);
+    patch->osc3.mparam1       = get_value_from_knob(Y_PORT_OSC3_MPARAM1, voice_widgets);
+    patch->osc3.mparam2       = get_value_from_knob(Y_PORT_OSC3_MPARAM2, voice_widgets);
+    patch->osc3.mmod_src      = get_value_from_combo(Y_PORT_OSC3_MMOD_SRC, voice_widgets);
+    patch->osc3.mmod_amt      = get_value_from_knob(Y_PORT_OSC3_MMOD_AMT, voice_widgets);
+    patch->osc3.amp_mod_src   = get_value_from_combo(Y_PORT_OSC3_AMP_MOD_SRC, voice_widgets);
+    patch->osc3.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC3_AMP_MOD_AMT, voice_widgets);
+    patch->osc3.level_a       = get_value_from_knob(Y_PORT_OSC3_LEVEL_A, voice_widgets);
+    patch->osc3.level_b       = get_value_from_knob(Y_PORT_OSC3_LEVEL_B, voice_widgets);
 
-    patch->osc4.mode          = get_value_from_combo(Y_PORT_OSC4_MODE);
-    patch->osc4.waveform      = get_value_from_combo(Y_PORT_OSC4_WAVEFORM);
-    patch->osc4.pitch         = get_value_from_detent(Y_PORT_OSC4_PITCH);
-    patch->osc4.detune        = get_value_from_knob(Y_PORT_OSC4_DETUNE);
-    patch->osc4.pitch_mod_src = get_value_from_combo(Y_PORT_OSC4_PITCH_MOD_SRC);
-    patch->osc4.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC4_PITCH_MOD_AMT);
-    patch->osc4.mparam1       = get_value_from_knob(Y_PORT_OSC4_MPARAM1);
-    patch->osc4.mparam2       = get_value_from_knob(Y_PORT_OSC4_MPARAM2);
-    patch->osc4.mmod_src      = get_value_from_combo(Y_PORT_OSC4_MMOD_SRC);
-    patch->osc4.mmod_amt      = get_value_from_knob(Y_PORT_OSC4_MMOD_AMT);
-    patch->osc4.amp_mod_src   = get_value_from_combo(Y_PORT_OSC4_AMP_MOD_SRC);
-    patch->osc4.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC4_AMP_MOD_AMT);
-    patch->osc4.level_a       = get_value_from_knob(Y_PORT_OSC4_LEVEL_A);
-    patch->osc4.level_b       = get_value_from_knob(Y_PORT_OSC4_LEVEL_B);
+    patch->osc4.mode          = get_value_from_combo(Y_PORT_OSC4_MODE, voice_widgets);
+    patch->osc4.waveform      = get_value_from_combo(Y_PORT_OSC4_WAVEFORM, voice_widgets);
+    patch->osc4.pitch         = get_value_from_detent(Y_PORT_OSC4_PITCH, voice_widgets);
+    patch->osc4.detune        = get_value_from_knob(Y_PORT_OSC4_DETUNE, voice_widgets);
+    patch->osc4.pitch_mod_src = get_value_from_combo(Y_PORT_OSC4_PITCH_MOD_SRC, voice_widgets);
+    patch->osc4.pitch_mod_amt = get_value_from_knob(Y_PORT_OSC4_PITCH_MOD_AMT, voice_widgets);
+    patch->osc4.mparam1       = get_value_from_knob(Y_PORT_OSC4_MPARAM1, voice_widgets);
+    patch->osc4.mparam2       = get_value_from_knob(Y_PORT_OSC4_MPARAM2, voice_widgets);
+    patch->osc4.mmod_src      = get_value_from_combo(Y_PORT_OSC4_MMOD_SRC, voice_widgets);
+    patch->osc4.mmod_amt      = get_value_from_knob(Y_PORT_OSC4_MMOD_AMT, voice_widgets);
+    patch->osc4.amp_mod_src   = get_value_from_combo(Y_PORT_OSC4_AMP_MOD_SRC, voice_widgets);
+    patch->osc4.amp_mod_amt   = get_value_from_knob(Y_PORT_OSC4_AMP_MOD_AMT, voice_widgets);
+    patch->osc4.level_a       = get_value_from_knob(Y_PORT_OSC4_LEVEL_A, voice_widgets);
+    patch->osc4.level_b       = get_value_from_knob(Y_PORT_OSC4_LEVEL_B, voice_widgets);
 
-    patch->vcf1.mode          = get_value_from_combo(Y_PORT_VCF1_MODE);
-    patch->vcf1.source        = get_value_from_combo(Y_PORT_VCF1_SOURCE);
-    patch->vcf1.frequency     = get_value_from_knob(Y_PORT_VCF1_FREQUENCY);
-    patch->vcf1.freq_mod_src  = get_value_from_combo(Y_PORT_VCF1_FREQ_MOD_SRC);
-    patch->vcf1.freq_mod_amt  = get_value_from_knob(Y_PORT_VCF1_FREQ_MOD_AMT);
-    patch->vcf1.qres          = get_value_from_knob(Y_PORT_VCF1_QRES);
-    patch->vcf1.mparam        = get_value_from_knob(Y_PORT_VCF1_MPARAM);
+    patch->vcf1.mode          = get_value_from_combo(Y_PORT_VCF1_MODE, voice_widgets);
+    patch->vcf1.source        = get_value_from_combo(Y_PORT_VCF1_SOURCE, voice_widgets);
+    patch->vcf1.frequency     = get_value_from_knob(Y_PORT_VCF1_FREQUENCY, voice_widgets);
+    patch->vcf1.freq_mod_src  = get_value_from_combo(Y_PORT_VCF1_FREQ_MOD_SRC, voice_widgets);
+    patch->vcf1.freq_mod_amt  = get_value_from_knob(Y_PORT_VCF1_FREQ_MOD_AMT, voice_widgets);
+    patch->vcf1.qres          = get_value_from_knob(Y_PORT_VCF1_QRES, voice_widgets);
+    patch->vcf1.mparam        = get_value_from_knob(Y_PORT_VCF1_MPARAM, voice_widgets);
 
-    patch->vcf2.mode          = get_value_from_combo(Y_PORT_VCF2_MODE);
-    patch->vcf2.source        = get_value_from_combo(Y_PORT_VCF2_SOURCE);
-    patch->vcf2.frequency     = get_value_from_knob(Y_PORT_VCF2_FREQUENCY);
-    patch->vcf2.freq_mod_src  = get_value_from_combo(Y_PORT_VCF2_FREQ_MOD_SRC);
-    patch->vcf2.freq_mod_amt  = get_value_from_knob(Y_PORT_VCF2_FREQ_MOD_AMT);
-    patch->vcf2.qres          = get_value_from_knob(Y_PORT_VCF2_QRES);
-    patch->vcf2.mparam        = get_value_from_knob(Y_PORT_VCF2_MPARAM);
+    patch->vcf2.mode          = get_value_from_combo(Y_PORT_VCF2_MODE, voice_widgets);
+    patch->vcf2.source        = get_value_from_combo(Y_PORT_VCF2_SOURCE, voice_widgets);
+    patch->vcf2.frequency     = get_value_from_knob(Y_PORT_VCF2_FREQUENCY, voice_widgets);
+    patch->vcf2.freq_mod_src  = get_value_from_combo(Y_PORT_VCF2_FREQ_MOD_SRC, voice_widgets);
+    patch->vcf2.freq_mod_amt  = get_value_from_knob(Y_PORT_VCF2_FREQ_MOD_AMT, voice_widgets);
+    patch->vcf2.qres          = get_value_from_knob(Y_PORT_VCF2_QRES, voice_widgets);
+    patch->vcf2.mparam        = get_value_from_knob(Y_PORT_VCF2_MPARAM, voice_widgets);
 
-    patch->busa_level         = get_value_from_knob(Y_PORT_BUSA_LEVEL);
-    patch->busa_pan           = get_value_from_knob(Y_PORT_BUSA_PAN);
-    patch->busb_level         = get_value_from_knob(Y_PORT_BUSB_LEVEL);
-    patch->busb_pan           = get_value_from_knob(Y_PORT_BUSB_PAN);
-    patch->vcf1_level         = get_value_from_knob(Y_PORT_VCF1_LEVEL);
-    patch->vcf1_pan           = get_value_from_knob(Y_PORT_VCF1_PAN);
-    patch->vcf2_level         = get_value_from_knob(Y_PORT_VCF2_LEVEL);
-    patch->vcf2_pan           = get_value_from_knob(Y_PORT_VCF2_PAN);
-    patch->volume             = get_value_from_knob(Y_PORT_VOLUME);
+    patch->busa_level         = get_value_from_knob(Y_PORT_BUSA_LEVEL, voice_widgets);
+    patch->busa_pan           = get_value_from_knob(Y_PORT_BUSA_PAN, voice_widgets);
+    patch->busb_level         = get_value_from_knob(Y_PORT_BUSB_LEVEL, voice_widgets);
+    patch->busb_pan           = get_value_from_knob(Y_PORT_BUSB_PAN, voice_widgets);
+    patch->vcf1_level         = get_value_from_knob(Y_PORT_VCF1_LEVEL, voice_widgets);
+    patch->vcf1_pan           = get_value_from_knob(Y_PORT_VCF1_PAN, voice_widgets);
+    patch->vcf2_level         = get_value_from_knob(Y_PORT_VCF2_LEVEL, voice_widgets);
+    patch->vcf2_pan           = get_value_from_knob(Y_PORT_VCF2_PAN, voice_widgets);
+    patch->volume             = get_value_from_knob(Y_PORT_VOLUME, voice_widgets);
 
-    patch->effect_mode        = get_value_from_combo(Y_PORT_EFFECT_MODE);
-    patch->effect_param1      = get_value_from_knob(Y_PORT_EFFECT_PARAM1);
-    patch->effect_param2      = get_value_from_knob(Y_PORT_EFFECT_PARAM2);
-    patch->effect_param3      = get_value_from_knob(Y_PORT_EFFECT_PARAM3);
-    patch->effect_param4      = get_value_from_knob(Y_PORT_EFFECT_PARAM4);
-    patch->effect_param5      = get_value_from_knob(Y_PORT_EFFECT_PARAM5);
-    patch->effect_param6      = get_value_from_knob(Y_PORT_EFFECT_PARAM6);
-    patch->effect_mix         = get_value_from_knob(Y_PORT_EFFECT_MIX);
+    patch->effect_mode        = get_value_from_combo(Y_PORT_EFFECT_MODE, voice_widgets);
+    patch->effect_param1      = get_value_from_knob(Y_PORT_EFFECT_PARAM1, voice_widgets);
+    patch->effect_param2      = get_value_from_knob(Y_PORT_EFFECT_PARAM2, voice_widgets);
+    patch->effect_param3      = get_value_from_knob(Y_PORT_EFFECT_PARAM3, voice_widgets);
+    patch->effect_param4      = get_value_from_knob(Y_PORT_EFFECT_PARAM4, voice_widgets);
+    patch->effect_param5      = get_value_from_knob(Y_PORT_EFFECT_PARAM5, voice_widgets);
+    patch->effect_param6      = get_value_from_knob(Y_PORT_EFFECT_PARAM6, voice_widgets);
+    patch->effect_mix         = get_value_from_knob(Y_PORT_EFFECT_MIX, voice_widgets);
 
-    patch->glide_time         = get_value_from_knob(Y_PORT_GLIDE_TIME);
-    patch->bend_range         = get_value_from_detent(Y_PORT_BEND_RANGE);
+    patch->glide_time         = get_value_from_knob(Y_PORT_GLIDE_TIME, voice_widgets);
+    patch->bend_range         = get_value_from_detent(Y_PORT_BEND_RANGE, voice_widgets);
 
-    patch->glfo.frequency     = get_value_from_knob(Y_PORT_GLFO_FREQUENCY);
-    patch->glfo.waveform      = get_value_from_combo(Y_PORT_GLFO_WAVEFORM);
+    patch->glfo.frequency     = get_value_from_knob(Y_PORT_GLFO_FREQUENCY, voice_widgets);
+    patch->glfo.waveform      = get_value_from_combo(Y_PORT_GLFO_WAVEFORM, voice_widgets);
     patch->glfo.delay         = 0.0f;
-    patch->glfo.amp_mod_src   = get_value_from_combo(Y_PORT_GLFO_AMP_MOD_SRC);
-    patch->glfo.amp_mod_amt   = get_value_from_knob(Y_PORT_GLFO_AMP_MOD_AMT);
+    patch->glfo.amp_mod_src   = get_value_from_combo(Y_PORT_GLFO_AMP_MOD_SRC, voice_widgets);
+    patch->glfo.amp_mod_amt   = get_value_from_knob(Y_PORT_GLFO_AMP_MOD_AMT, voice_widgets);
 
-    patch->vlfo.frequency     = get_value_from_knob(Y_PORT_VLFO_FREQUENCY);
-    patch->vlfo.waveform      = get_value_from_combo(Y_PORT_VLFO_WAVEFORM);
-    patch->vlfo.delay         = get_value_from_knob(Y_PORT_VLFO_DELAY);
-    patch->vlfo.amp_mod_src   = get_value_from_combo(Y_PORT_VLFO_AMP_MOD_SRC);
-    patch->vlfo.amp_mod_amt   = get_value_from_knob(Y_PORT_VLFO_AMP_MOD_AMT);
+    patch->vlfo.frequency     = get_value_from_knob(Y_PORT_VLFO_FREQUENCY, voice_widgets);
+    patch->vlfo.waveform      = get_value_from_combo(Y_PORT_VLFO_WAVEFORM, voice_widgets);
+    patch->vlfo.delay         = get_value_from_knob(Y_PORT_VLFO_DELAY, voice_widgets);
+    patch->vlfo.amp_mod_src   = get_value_from_combo(Y_PORT_VLFO_AMP_MOD_SRC, voice_widgets);
+    patch->vlfo.amp_mod_amt   = get_value_from_knob(Y_PORT_VLFO_AMP_MOD_AMT, voice_widgets);
 
-    patch->mlfo.frequency     = get_value_from_knob(Y_PORT_MLFO_FREQUENCY);
-    patch->mlfo.waveform      = get_value_from_combo(Y_PORT_MLFO_WAVEFORM);
-    patch->mlfo.delay         = get_value_from_knob(Y_PORT_MLFO_DELAY);
-    patch->mlfo.amp_mod_src   = get_value_from_combo(Y_PORT_MLFO_AMP_MOD_SRC);
-    patch->mlfo.amp_mod_amt   = get_value_from_knob(Y_PORT_MLFO_AMP_MOD_AMT);
-    patch->mlfo_phase_spread  = get_value_from_knob(Y_PORT_MLFO_PHASE_SPREAD);
-    patch->mlfo_random_freq   = get_value_from_knob(Y_PORT_MLFO_RANDOM_FREQ);
+    patch->mlfo.frequency     = get_value_from_knob(Y_PORT_MLFO_FREQUENCY, voice_widgets);
+    patch->mlfo.waveform      = get_value_from_combo(Y_PORT_MLFO_WAVEFORM, voice_widgets);
+    patch->mlfo.delay         = get_value_from_knob(Y_PORT_MLFO_DELAY, voice_widgets);
+    patch->mlfo.amp_mod_src   = get_value_from_combo(Y_PORT_MLFO_AMP_MOD_SRC, voice_widgets);
+    patch->mlfo.amp_mod_amt   = get_value_from_knob(Y_PORT_MLFO_AMP_MOD_AMT, voice_widgets);
+    patch->mlfo_phase_spread  = get_value_from_knob(Y_PORT_MLFO_PHASE_SPREAD, voice_widgets);
+    patch->mlfo_random_freq   = get_value_from_knob(Y_PORT_MLFO_RANDOM_FREQ, voice_widgets);
 
-    patch->ego.mode           = get_value_from_combo(Y_PORT_EGO_MODE);
-    patch->ego.shape1         = get_value_from_combo(Y_PORT_EGO_SHAPE1);
-    patch->ego.time1          = get_value_from_knob(Y_PORT_EGO_TIME1);
-    patch->ego.level1         = get_value_from_knob(Y_PORT_EGO_LEVEL1);
-    patch->ego.shape2         = get_value_from_combo(Y_PORT_EGO_SHAPE2);
-    patch->ego.time2          = get_value_from_knob(Y_PORT_EGO_TIME2);
-    patch->ego.level2         = get_value_from_knob(Y_PORT_EGO_LEVEL2);
-    patch->ego.shape3         = get_value_from_combo(Y_PORT_EGO_SHAPE3);
-    patch->ego.time3          = get_value_from_knob(Y_PORT_EGO_TIME3);
-    patch->ego.level3         = get_value_from_knob(Y_PORT_EGO_LEVEL3);
-    patch->ego.shape4         = get_value_from_combo(Y_PORT_EGO_SHAPE4);
-    patch->ego.time4          = get_value_from_knob(Y_PORT_EGO_TIME4);
-    patch->ego.vel_level_sens = get_value_from_knob(Y_PORT_EGO_VEL_LEVEL_SENS);
-    patch->ego.vel_time_scale = get_value_from_knob(Y_PORT_EGO_VEL_TIME_SCALE);
-    patch->ego.kbd_time_scale = get_value_from_knob(Y_PORT_EGO_KBD_TIME_SCALE);
-    patch->ego.amp_mod_src    = get_value_from_combo(Y_PORT_EGO_AMP_MOD_SRC);
-    patch->ego.amp_mod_amt    = get_value_from_knob(Y_PORT_EGO_AMP_MOD_AMT);
+    patch->ego.mode           = get_value_from_combo(Y_PORT_EGO_MODE, voice_widgets);
+    patch->ego.shape1         = get_value_from_combo(Y_PORT_EGO_SHAPE1, voice_widgets);
+    patch->ego.time1          = get_value_from_knob(Y_PORT_EGO_TIME1, voice_widgets);
+    patch->ego.level1         = get_value_from_knob(Y_PORT_EGO_LEVEL1, voice_widgets);
+    patch->ego.shape2         = get_value_from_combo(Y_PORT_EGO_SHAPE2, voice_widgets);
+    patch->ego.time2          = get_value_from_knob(Y_PORT_EGO_TIME2, voice_widgets);
+    patch->ego.level2         = get_value_from_knob(Y_PORT_EGO_LEVEL2, voice_widgets);
+    patch->ego.shape3         = get_value_from_combo(Y_PORT_EGO_SHAPE3, voice_widgets);
+    patch->ego.time3          = get_value_from_knob(Y_PORT_EGO_TIME3, voice_widgets);
+    patch->ego.level3         = get_value_from_knob(Y_PORT_EGO_LEVEL3, voice_widgets);
+    patch->ego.shape4         = get_value_from_combo(Y_PORT_EGO_SHAPE4, voice_widgets);
+    patch->ego.time4          = get_value_from_knob(Y_PORT_EGO_TIME4, voice_widgets);
+    patch->ego.vel_level_sens = get_value_from_knob(Y_PORT_EGO_VEL_LEVEL_SENS, voice_widgets);
+    patch->ego.vel_time_scale = get_value_from_knob(Y_PORT_EGO_VEL_TIME_SCALE, voice_widgets);
+    patch->ego.kbd_time_scale = get_value_from_knob(Y_PORT_EGO_KBD_TIME_SCALE, voice_widgets);
+    patch->ego.amp_mod_src    = get_value_from_combo(Y_PORT_EGO_AMP_MOD_SRC, voice_widgets);
+    patch->ego.amp_mod_amt    = get_value_from_knob(Y_PORT_EGO_AMP_MOD_AMT, voice_widgets);
 
-    patch->eg1.mode           = get_value_from_combo(Y_PORT_EG1_MODE);
-    patch->eg1.shape1         = get_value_from_combo(Y_PORT_EG1_SHAPE1);
-    patch->eg1.time1          = get_value_from_knob(Y_PORT_EG1_TIME1);
-    patch->eg1.level1         = get_value_from_knob(Y_PORT_EG1_LEVEL1);
-    patch->eg1.shape2         = get_value_from_combo(Y_PORT_EG1_SHAPE2);
-    patch->eg1.time2          = get_value_from_knob(Y_PORT_EG1_TIME2);
-    patch->eg1.level2         = get_value_from_knob(Y_PORT_EG1_LEVEL2);
-    patch->eg1.shape3         = get_value_from_combo(Y_PORT_EG1_SHAPE3);
-    patch->eg1.time3          = get_value_from_knob(Y_PORT_EG1_TIME3);
-    patch->eg1.level3         = get_value_from_knob(Y_PORT_EG1_LEVEL3);
-    patch->eg1.shape4         = get_value_from_combo(Y_PORT_EG1_SHAPE4);
-    patch->eg1.time4          = get_value_from_knob(Y_PORT_EG1_TIME4);
-    patch->eg1.vel_level_sens = get_value_from_knob(Y_PORT_EG1_VEL_LEVEL_SENS);
-    patch->eg1.vel_time_scale = get_value_from_knob(Y_PORT_EG1_VEL_TIME_SCALE);
-    patch->eg1.kbd_time_scale = get_value_from_knob(Y_PORT_EG1_KBD_TIME_SCALE);
-    patch->eg1.amp_mod_src    = get_value_from_combo(Y_PORT_EG1_AMP_MOD_SRC);
-    patch->eg1.amp_mod_amt    = get_value_from_knob(Y_PORT_EG1_AMP_MOD_AMT);
+    patch->eg1.mode           = get_value_from_combo(Y_PORT_EG1_MODE, voice_widgets);
+    patch->eg1.shape1         = get_value_from_combo(Y_PORT_EG1_SHAPE1, voice_widgets);
+    patch->eg1.time1          = get_value_from_knob(Y_PORT_EG1_TIME1, voice_widgets);
+    patch->eg1.level1         = get_value_from_knob(Y_PORT_EG1_LEVEL1, voice_widgets);
+    patch->eg1.shape2         = get_value_from_combo(Y_PORT_EG1_SHAPE2, voice_widgets);
+    patch->eg1.time2          = get_value_from_knob(Y_PORT_EG1_TIME2, voice_widgets);
+    patch->eg1.level2         = get_value_from_knob(Y_PORT_EG1_LEVEL2, voice_widgets);
+    patch->eg1.shape3         = get_value_from_combo(Y_PORT_EG1_SHAPE3, voice_widgets);
+    patch->eg1.time3          = get_value_from_knob(Y_PORT_EG1_TIME3, voice_widgets);
+    patch->eg1.level3         = get_value_from_knob(Y_PORT_EG1_LEVEL3, voice_widgets);
+    patch->eg1.shape4         = get_value_from_combo(Y_PORT_EG1_SHAPE4, voice_widgets);
+    patch->eg1.time4          = get_value_from_knob(Y_PORT_EG1_TIME4, voice_widgets);
+    patch->eg1.vel_level_sens = get_value_from_knob(Y_PORT_EG1_VEL_LEVEL_SENS, voice_widgets);
+    patch->eg1.vel_time_scale = get_value_from_knob(Y_PORT_EG1_VEL_TIME_SCALE, voice_widgets);
+    patch->eg1.kbd_time_scale = get_value_from_knob(Y_PORT_EG1_KBD_TIME_SCALE, voice_widgets);
+    patch->eg1.amp_mod_src    = get_value_from_combo(Y_PORT_EG1_AMP_MOD_SRC, voice_widgets);
+    patch->eg1.amp_mod_amt    = get_value_from_knob(Y_PORT_EG1_AMP_MOD_AMT, voice_widgets);
 
-    patch->eg2.mode           = get_value_from_combo(Y_PORT_EG2_MODE);
-    patch->eg2.shape1         = get_value_from_combo(Y_PORT_EG2_SHAPE1);
-    patch->eg2.time1          = get_value_from_knob(Y_PORT_EG2_TIME1);
-    patch->eg2.level1         = get_value_from_knob(Y_PORT_EG2_LEVEL1);
-    patch->eg2.shape2         = get_value_from_combo(Y_PORT_EG2_SHAPE2);
-    patch->eg2.time2          = get_value_from_knob(Y_PORT_EG2_TIME2);
-    patch->eg2.level2         = get_value_from_knob(Y_PORT_EG2_LEVEL2);
-    patch->eg2.shape3         = get_value_from_combo(Y_PORT_EG2_SHAPE3);
-    patch->eg2.time3          = get_value_from_knob(Y_PORT_EG2_TIME3);
-    patch->eg2.level3         = get_value_from_knob(Y_PORT_EG2_LEVEL3);
-    patch->eg2.shape4         = get_value_from_combo(Y_PORT_EG2_SHAPE4);
-    patch->eg2.time4          = get_value_from_knob(Y_PORT_EG2_TIME4);
-    patch->eg2.vel_level_sens = get_value_from_knob(Y_PORT_EG2_VEL_LEVEL_SENS);
-    patch->eg2.vel_time_scale = get_value_from_knob(Y_PORT_EG2_VEL_TIME_SCALE);
-    patch->eg2.kbd_time_scale = get_value_from_knob(Y_PORT_EG2_KBD_TIME_SCALE);
-    patch->eg2.amp_mod_src    = get_value_from_combo(Y_PORT_EG2_AMP_MOD_SRC);
-    patch->eg2.amp_mod_amt    = get_value_from_knob(Y_PORT_EG2_AMP_MOD_AMT);
+    patch->eg2.mode           = get_value_from_combo(Y_PORT_EG2_MODE, voice_widgets);
+    patch->eg2.shape1         = get_value_from_combo(Y_PORT_EG2_SHAPE1, voice_widgets);
+    patch->eg2.time1          = get_value_from_knob(Y_PORT_EG2_TIME1, voice_widgets);
+    patch->eg2.level1         = get_value_from_knob(Y_PORT_EG2_LEVEL1, voice_widgets);
+    patch->eg2.shape2         = get_value_from_combo(Y_PORT_EG2_SHAPE2, voice_widgets);
+    patch->eg2.time2          = get_value_from_knob(Y_PORT_EG2_TIME2, voice_widgets);
+    patch->eg2.level2         = get_value_from_knob(Y_PORT_EG2_LEVEL2, voice_widgets);
+    patch->eg2.shape3         = get_value_from_combo(Y_PORT_EG2_SHAPE3, voice_widgets);
+    patch->eg2.time3          = get_value_from_knob(Y_PORT_EG2_TIME3, voice_widgets);
+    patch->eg2.level3         = get_value_from_knob(Y_PORT_EG2_LEVEL3, voice_widgets);
+    patch->eg2.shape4         = get_value_from_combo(Y_PORT_EG2_SHAPE4, voice_widgets);
+    patch->eg2.time4          = get_value_from_knob(Y_PORT_EG2_TIME4, voice_widgets);
+    patch->eg2.vel_level_sens = get_value_from_knob(Y_PORT_EG2_VEL_LEVEL_SENS, voice_widgets);
+    patch->eg2.vel_time_scale = get_value_from_knob(Y_PORT_EG2_VEL_TIME_SCALE, voice_widgets);
+    patch->eg2.kbd_time_scale = get_value_from_knob(Y_PORT_EG2_KBD_TIME_SCALE, voice_widgets);
+    patch->eg2.amp_mod_src    = get_value_from_combo(Y_PORT_EG2_AMP_MOD_SRC, voice_widgets);
+    patch->eg2.amp_mod_amt    = get_value_from_knob(Y_PORT_EG2_AMP_MOD_AMT, voice_widgets);
 
-    patch->eg3.mode           = get_value_from_combo(Y_PORT_EG3_MODE);
-    patch->eg3.shape1         = get_value_from_combo(Y_PORT_EG3_SHAPE1);
-    patch->eg3.time1          = get_value_from_knob(Y_PORT_EG3_TIME1);
-    patch->eg3.level1         = get_value_from_knob(Y_PORT_EG3_LEVEL1);
-    patch->eg3.shape2         = get_value_from_combo(Y_PORT_EG3_SHAPE2);
-    patch->eg3.time2          = get_value_from_knob(Y_PORT_EG3_TIME2);
-    patch->eg3.level2         = get_value_from_knob(Y_PORT_EG3_LEVEL2);
-    patch->eg3.shape3         = get_value_from_combo(Y_PORT_EG3_SHAPE3);
-    patch->eg3.time3          = get_value_from_knob(Y_PORT_EG3_TIME3);
-    patch->eg3.level3         = get_value_from_knob(Y_PORT_EG3_LEVEL3);
-    patch->eg3.shape4         = get_value_from_combo(Y_PORT_EG3_SHAPE4);
-    patch->eg3.time4          = get_value_from_knob(Y_PORT_EG3_TIME4);
-    patch->eg3.vel_level_sens = get_value_from_knob(Y_PORT_EG3_VEL_LEVEL_SENS);
-    patch->eg3.vel_time_scale = get_value_from_knob(Y_PORT_EG3_VEL_TIME_SCALE);
-    patch->eg3.kbd_time_scale = get_value_from_knob(Y_PORT_EG3_KBD_TIME_SCALE);
-    patch->eg3.amp_mod_src    = get_value_from_combo(Y_PORT_EG3_AMP_MOD_SRC);
-    patch->eg3.amp_mod_amt    = get_value_from_knob(Y_PORT_EG3_AMP_MOD_AMT);
+    patch->eg3.mode           = get_value_from_combo(Y_PORT_EG3_MODE, voice_widgets);
+    patch->eg3.shape1         = get_value_from_combo(Y_PORT_EG3_SHAPE1, voice_widgets);
+    patch->eg3.time1          = get_value_from_knob(Y_PORT_EG3_TIME1, voice_widgets);
+    patch->eg3.level1         = get_value_from_knob(Y_PORT_EG3_LEVEL1, voice_widgets);
+    patch->eg3.shape2         = get_value_from_combo(Y_PORT_EG3_SHAPE2, voice_widgets);
+    patch->eg3.time2          = get_value_from_knob(Y_PORT_EG3_TIME2, voice_widgets);
+    patch->eg3.level2         = get_value_from_knob(Y_PORT_EG3_LEVEL2, voice_widgets);
+    patch->eg3.shape3         = get_value_from_combo(Y_PORT_EG3_SHAPE3, voice_widgets);
+    patch->eg3.time3          = get_value_from_knob(Y_PORT_EG3_TIME3, voice_widgets);
+    patch->eg3.level3         = get_value_from_knob(Y_PORT_EG3_LEVEL3, voice_widgets);
+    patch->eg3.shape4         = get_value_from_combo(Y_PORT_EG3_SHAPE4, voice_widgets);
+    patch->eg3.time4          = get_value_from_knob(Y_PORT_EG3_TIME4, voice_widgets);
+    patch->eg3.vel_level_sens = get_value_from_knob(Y_PORT_EG3_VEL_LEVEL_SENS, voice_widgets);
+    patch->eg3.vel_time_scale = get_value_from_knob(Y_PORT_EG3_VEL_TIME_SCALE, voice_widgets);
+    patch->eg3.kbd_time_scale = get_value_from_knob(Y_PORT_EG3_KBD_TIME_SCALE, voice_widgets);
+    patch->eg3.amp_mod_src    = get_value_from_combo(Y_PORT_EG3_AMP_MOD_SRC, voice_widgets);
+    patch->eg3.amp_mod_amt    = get_value_from_knob(Y_PORT_EG3_AMP_MOD_AMT, voice_widgets);
 
-    patch->eg4.mode           = get_value_from_combo(Y_PORT_EG4_MODE);
-    patch->eg4.shape1         = get_value_from_combo(Y_PORT_EG4_SHAPE1);
-    patch->eg4.time1          = get_value_from_knob(Y_PORT_EG4_TIME1);
-    patch->eg4.level1         = get_value_from_knob(Y_PORT_EG4_LEVEL1);
-    patch->eg4.shape2         = get_value_from_combo(Y_PORT_EG4_SHAPE2);
-    patch->eg4.time2          = get_value_from_knob(Y_PORT_EG4_TIME2);
-    patch->eg4.level2         = get_value_from_knob(Y_PORT_EG4_LEVEL2);
-    patch->eg4.shape3         = get_value_from_combo(Y_PORT_EG4_SHAPE3);
-    patch->eg4.time3          = get_value_from_knob(Y_PORT_EG4_TIME3);
-    patch->eg4.level3         = get_value_from_knob(Y_PORT_EG4_LEVEL3);
-    patch->eg4.shape4         = get_value_from_combo(Y_PORT_EG4_SHAPE4);
-    patch->eg4.time4          = get_value_from_knob(Y_PORT_EG4_TIME4);
-    patch->eg4.vel_level_sens = get_value_from_knob(Y_PORT_EG4_VEL_LEVEL_SENS);
-    patch->eg4.vel_time_scale = get_value_from_knob(Y_PORT_EG4_VEL_TIME_SCALE);
-    patch->eg4.kbd_time_scale = get_value_from_knob(Y_PORT_EG4_KBD_TIME_SCALE);
-    patch->eg4.amp_mod_src    = get_value_from_combo(Y_PORT_EG4_AMP_MOD_SRC);
-    patch->eg4.amp_mod_amt    = get_value_from_knob(Y_PORT_EG4_AMP_MOD_AMT);
+    patch->eg4.mode           = get_value_from_combo(Y_PORT_EG4_MODE, voice_widgets);
+    patch->eg4.shape1         = get_value_from_combo(Y_PORT_EG4_SHAPE1, voice_widgets);
+    patch->eg4.time1          = get_value_from_knob(Y_PORT_EG4_TIME1, voice_widgets);
+    patch->eg4.level1         = get_value_from_knob(Y_PORT_EG4_LEVEL1, voice_widgets);
+    patch->eg4.shape2         = get_value_from_combo(Y_PORT_EG4_SHAPE2, voice_widgets);
+    patch->eg4.time2          = get_value_from_knob(Y_PORT_EG4_TIME2, voice_widgets);
+    patch->eg4.level2         = get_value_from_knob(Y_PORT_EG4_LEVEL2, voice_widgets);
+    patch->eg4.shape3         = get_value_from_combo(Y_PORT_EG4_SHAPE3, voice_widgets);
+    patch->eg4.time3          = get_value_from_knob(Y_PORT_EG4_TIME3, voice_widgets);
+    patch->eg4.level3         = get_value_from_knob(Y_PORT_EG4_LEVEL3, voice_widgets);
+    patch->eg4.shape4         = get_value_from_combo(Y_PORT_EG4_SHAPE4, voice_widgets);
+    patch->eg4.time4          = get_value_from_knob(Y_PORT_EG4_TIME4, voice_widgets);
+    patch->eg4.vel_level_sens = get_value_from_knob(Y_PORT_EG4_VEL_LEVEL_SENS, voice_widgets);
+    patch->eg4.vel_time_scale = get_value_from_knob(Y_PORT_EG4_VEL_TIME_SCALE, voice_widgets);
+    patch->eg4.kbd_time_scale = get_value_from_knob(Y_PORT_EG4_KBD_TIME_SCALE, voice_widgets);
+    patch->eg4.amp_mod_src    = get_value_from_combo(Y_PORT_EG4_AMP_MOD_SRC, voice_widgets);
+    patch->eg4.amp_mod_amt    = get_value_from_knob(Y_PORT_EG4_AMP_MOD_AMT, voice_widgets);
 
-    patch->modmix_bias        = get_value_from_knob(Y_PORT_MODMIX_BIAS);
-    patch->modmix_mod1_src    = get_value_from_combo(Y_PORT_MODMIX_MOD1_SRC);
-    patch->modmix_mod1_amt    = get_value_from_knob(Y_PORT_MODMIX_MOD1_AMT);
-    patch->modmix_mod2_src    = get_value_from_combo(Y_PORT_MODMIX_MOD2_SRC);
-    patch->modmix_mod2_amt    = get_value_from_knob(Y_PORT_MODMIX_MOD2_AMT);
+    patch->modmix_bias        = get_value_from_knob(Y_PORT_MODMIX_BIAS, voice_widgets);
+    patch->modmix_mod1_src    = get_value_from_combo(Y_PORT_MODMIX_MOD1_SRC, voice_widgets);
+    patch->modmix_mod1_amt    = get_value_from_knob(Y_PORT_MODMIX_MOD1_AMT, voice_widgets);
+    patch->modmix_mod2_src    = get_value_from_combo(Y_PORT_MODMIX_MOD2_SRC, voice_widgets);
+    patch->modmix_mod2_amt    = get_value_from_knob(Y_PORT_MODMIX_MOD2_AMT, voice_widgets);
 
     strncpy(patch->name, gtk_entry_get_text(GTK_ENTRY(name_entry)), 30);
     patch->name[30] = 0;

@@ -81,8 +81,11 @@ int last_configure_load_was_from_tmp;
 int host_requested_quit = 0;
 int gui_test_mode = 0;
 
-LV2UI_Write_Function lv2_write_function;
-LV2UI_Controller     lv2_controller;
+struct lv2_state
+{
+    GtkWidget* notebook;
+    struct y_ui_callback_data_t* callback_data;
+};
 
 /* ==== OSC handling ==== */
 
@@ -227,7 +230,7 @@ osc_control_handler(const char *path, const char *types, lo_arg **argv,
 
     GDB_MESSAGE(GDB_OSC, " osc_control_handler: control %d now %f\n", port, value);
 
-    update_voice_widget(port, value, FALSE);
+    update_voice_widget(port, value, FALSE, (struct y_ui_callback_data_t*)user_data);
 
     return 0;
 }
@@ -254,7 +257,7 @@ osc_program_handler(const char *path, const char *types, lo_arg **argv,
 
     GDB_MESSAGE(GDB_OSC, " osc_program_handler: received program change, bank %d, program %d\n", bank, program);
 
-    update_from_program_select(bank * 128 + program);
+    update_from_program_select(bank * 128 + program, (struct y_ui_callback_data_t*)user_data);
 
     return 0;
 }
@@ -361,6 +364,12 @@ main(int argc, char *argv[])
         exit(1);
     }
 
+    struct y_ui_callback_data_t* callback_data = malloc(sizeof(struct y_ui_callback_data_t) * Y_PORTS_COUNT);
+
+    /* set up GTK+ */
+    update_port_wavetable_counts();
+    create_windows(argv[4], callback_data);
+
     /* set up OSC support */
     osc_host_url = argv[1];
     host = lo_url_get_hostname(osc_host_url);
@@ -380,9 +389,9 @@ main(int argc, char *argv[])
 
     osc_server = lo_server_new(NULL, osc_error);
     lo_server_add_method(osc_server, osc_configure_path, "ss", osc_configure_handler, NULL);
-    lo_server_add_method(osc_server, osc_control_path, "if", osc_control_handler, NULL);
+    lo_server_add_method(osc_server, osc_control_path, "if", osc_control_handler, callback_data);
     lo_server_add_method(osc_server, osc_hide_path, "", osc_action_handler, "hide");
-    lo_server_add_method(osc_server, osc_program_path, "ii", osc_program_handler, NULL);
+    lo_server_add_method(osc_server, osc_program_path, "ii", osc_program_handler, callback_data);
     lo_server_add_method(osc_server, osc_quit_path, "", osc_action_handler, "quit");
     lo_server_add_method(osc_server, osc_rate_path, "i", osc_action_handler, "sample-rate");
     lo_server_add_method(osc_server, osc_show_path, "", osc_action_handler, "show");
@@ -392,10 +401,6 @@ main(int argc, char *argv[])
     osc_self_url = osc_build_path(tmp_url, (strlen(path) > 1 ? path + 1 : path));
     free(tmp_url);
     GDB_MESSAGE(GDB_OSC, ": listening at %s\n", osc_self_url);
-
-    /* set up GTK+ */
-    update_port_wavetable_counts();
-    create_windows(argv[4]);
 
     /* add OSC server socket to GTK+'s watched I/O */
     if (lo_server_get_socket_fd(osc_server) < 0) {
@@ -427,6 +432,8 @@ main(int argc, char *argv[])
 
     /* release test note, if playing */
     release_test_note();
+
+    free(callback_data);
 
     /* GTK+ cleanup */
     gtk_timeout_remove(update_request_timeout_tag);
@@ -470,22 +477,31 @@ instantiate(const LV2UI_Descriptor*   descriptor,
             LV2UI_Widget*             widget,
             const LV2_Feature* const* features)
 {
-    lv2_write_function = write_function;
-    lv2_controller = controller;
     plugin_mode = Y_LV2;
 
+    struct y_ui_callback_data_t* callback_data = malloc(sizeof(struct y_ui_callback_data_t) * Y_PORTS_COUNT);
+
+    struct lv2_state* state = malloc(sizeof(struct lv2_state));
+    state->callback_data = callback_data;
+    set_lv2_write_function(callback_data, write_function);
+    set_lv2_controller(callback_data, controller);
+
     update_port_wavetable_counts();
-    create_edit_window("WhySynth LV2");
+    create_edit_window("WhySynth LV2", callback_data);
+    state->notebook = notebook;
     *widget = notebook;
 
-    return (LV2UI_Handle)notebook;
+    return (LV2UI_Handle)state;
 }
 
 
 static void
 cleanup(LV2UI_Handle handle)
 {
-    gtk_widget_destroy((GtkWidget*)handle);
+    struct lv2_state* state = (struct lv2_state*)handle;
+    gtk_widget_destroy(state->notebook);
+    free(state->callback_data->voice_widgets);
+    free(state->callback_data);
 }
 
 static void
@@ -505,7 +521,8 @@ port_event(LV2UI_Handle handle,
     if (port_index == Y_PORT_TUNING)
         return;
 
-    update_voice_widget(port_index, *(float*)buffer, FALSE);
+    struct lv2_state* state = (struct lv2_state*)handle;
+    update_voice_widget(port_index, *(float*)buffer, FALSE, state->callback_data);
 }
 
 static const LV2UI_Descriptor descriptor = {

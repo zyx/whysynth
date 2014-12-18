@@ -22,6 +22,7 @@
 #define _GUI_INTERFACE_H
 
 #include <gtk/gtk.h>
+#include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
 
 extern GtkWidget *main_window;
 extern GtkObject *main_test_note_key_adj;
@@ -84,8 +85,6 @@ struct voice_widgets {
     int        last_mode;
 };
 
-extern struct voice_widgets voice_widgets[];
-
 struct y_osc_modes_t {
     char *name;
     int   priority;
@@ -132,16 +131,31 @@ extern GtkTreeStore *combomodel[];
 extern GQuark combo_value_quark;
 extern GQuark combo_combomodel_type_quark;
 
-void create_windows(const char *instance_tag);
-void create_edit_window (const char *tag);
-
-enum y_plugin_mode
-{
+enum y_plugin_mode {
     Y_DSSI,
     Y_LV2
 };
 
 extern enum y_plugin_mode plugin_mode;
+
+// Data needed by UI callback functions.
+//  - index corresponds to #defines in whysynth_ports.h
+//  - lv2_write_function points to the function used to
+//    values back to the LV2 host
+//  - voice_widgets points to the array of voice_widget
+//    structs describing the UI elements.
+struct y_ui_callback_data_t {
+    int index;
+    LV2UI_Write_Function lv2_write_function;
+    LV2UI_Controller lv2_controller;
+    struct voice_widgets* voice_widgets;
+};
+
+void create_windows(const char *instance_tag, struct y_ui_callback_data_t* callback_data);
+void create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data);
+void set_lv2_write_function(struct y_ui_callback_data_t* callback_data, LV2UI_Write_Function function);
+void set_lv2_controller(struct y_ui_callback_data_t* callback_data, LV2UI_Controller controller);
+
 
 #endif /* _GUI_INTERFACE_H */
 
