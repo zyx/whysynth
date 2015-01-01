@@ -78,7 +78,14 @@ static struct {
 #endif
 } common;
 
-G_DEFINE_TYPE (GtkKnob, gtk_knob, GTK_TYPE_WIDGET);
+G_DEFINE_TYPE_WITH_CODE (GtkKnob,
+                         gtk_knob,
+                         GTK_TYPE_WIDGET,
+                         if (g_define_type_id == 0)
+                         {
+                             g_define_type_id = g_type_from_name("GtkKnob");
+                             parent_class = g_type_class_peek(g_type_parent(g_define_type_id));
+                         });
 
 static void     gtk_knob_class_init    (GtkKnobClass *klass);
 static void     gtk_knob_init          (GtkKnob *knob);
