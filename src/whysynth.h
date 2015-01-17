@@ -72,5 +72,10 @@
 #define Y_MAX_POLYPHONY     64
 #define Y_DEFAULT_POLYPHONY 12
 
+enum y_plugin_mode {
+    Y_DSSI,
+    Y_LV2
+};
+
 #endif /* _WHYSYNTH_H */
 

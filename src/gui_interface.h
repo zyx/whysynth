@@ -131,11 +131,6 @@ extern GtkTreeStore *combomodel[];
 extern GQuark combo_value_quark;
 extern GQuark combo_combomodel_type_quark;
 
-enum y_plugin_mode {
-    Y_DSSI,
-    Y_LV2
-};
-
 extern enum y_plugin_mode plugin_mode;
 
 // Data needed by UI callback functions.

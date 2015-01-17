@@ -139,6 +139,12 @@ y_instantiate(const LADSPA_Descriptor *descriptor, unsigned long sample_rate)
             free(synth);
             return NULL;
         }
+
+        // by default, we assume that we're running as a DSSI plugin.
+        // y_LV2_instantiate will change this to Y_LV2 when used as a
+        // LV2 plugin.
+        global.plugin_mode = Y_DSSI;
+
         global.instance_count = 1;
         global.initialized = 1;
     }
@@ -766,7 +772,10 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
     unsigned long samples_done = 0;
     unsigned long event_index = 0;
     unsigned long burst_size;
-    LV2_Atom_Event* event = lv2_atom_sequence_begin(&synth->control_port->body);
+
+    LV2_Atom_Event* event;
+    if (global.plugin_mode == Y_LV2)
+        event = lv2_atom_sequence_begin(&synth->control_port->body);
 
     /* attempt the mutex, return only silence if lock fails. */
     if (dssp_voicelist_mutex_trylock(synth)) {
@@ -782,32 +791,35 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
         if (!synth->control_remains)
             synth->control_remains = Y_CONTROL_PERIOD;
 
-        /* process any ready DSSI events */
-	while (event_index < event_count
-	       && samples_done == events[event_index].time.tick) {
-            y_handle_event(synth, &events[event_index]);
-            event_index++;
-        }
-
-        /* process any ready LV2 events */
-        while (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
-               && event->time.frames == samples_done) {
-            if (event->body.type == synth->uris.midi_Event) {
-                const uint8_t* const msg = (const uint8_t*)(event + 1);
-                uint8_t note = msg[1];
-                uint8_t velocity = msg[2];
-                switch (lv2_midi_message_type(msg)) {
-                case LV2_MIDI_MSG_NOTE_ON:
-                    y_synth_note_on(synth, note, velocity);
-                    break;
-                case LV2_MIDI_MSG_NOTE_OFF:
-                    y_synth_note_off(synth, note, velocity);
-                    break;
-                default:
-                    break;
-                }
+        if (global.plugin_mode == Y_DSSI) {
+            /* process any ready DSSI events */
+            while (event_index < event_count
+                   && samples_done == events[event_index].time.tick) {
+                y_handle_event(synth, &events[event_index]);
+                event_index++;
             }
-            event = lv2_atom_sequence_next(event);
+        }
+        else if (global.plugin_mode == Y_LV2) {
+            /* process any ready LV2 events */
+            while (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
+                   && event->time.frames == samples_done) {
+                if (event->body.type == synth->uris.midi_Event) {
+                    const uint8_t* const msg = (const uint8_t*)(event + 1);
+                    uint8_t note = msg[1];
+                    uint8_t velocity = msg[2];
+                    switch (lv2_midi_message_type(msg)) {
+                    case LV2_MIDI_MSG_NOTE_ON:
+                        y_synth_note_on(synth, note, velocity);
+                        break;
+                    case LV2_MIDI_MSG_NOTE_OFF:
+                        y_synth_note_off(synth, note, velocity);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                event = lv2_atom_sequence_next(event);
+            }
         }
 
         /* calculate the sample count (burst_size) for the next
@@ -826,12 +838,14 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
             burst_size = synth->control_remains;
         }
 
-        if (event_index < event_count
+        if (global.plugin_mode == Y_DSSI
+            && event_index < event_count
             && events[event_index].time.tick - samples_done < burst_size) {
             /* reduce burst size to end when next DSSI event is ready */
             burst_size = events[event_index].time.tick - samples_done;
-        } else if (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
-                   && event->time.frames - samples_done < burst_size ) {
+        } else if (global.plugin_mode == Y_LV2
+                   && ! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
+                   && event->time.frames - samples_done < burst_size) {
             /* reduce burst size to end when next LV2 event is ready */
             burst_size = event->time.frames - samples_done;
         }
@@ -872,6 +886,7 @@ y_LV2_instantiate(const struct _LV2_Descriptor * descriptor,
                   const LV2_Feature *const *     features)
 {
     y_synth_t *synth = (y_synth_t *)y_instantiate(NULL, (int)sample_rate);
+    global.plugin_mode = Y_LV2;
 
     for (int i = 0; features[i]; ++i)
         if (!strcmp(features[i]->URI, LV2_URID__map))

@@ -235,6 +235,10 @@ struct _y_global_t {
     int                    instance_count;
     unsigned long          sample_rate;
 
+    /* We assume that all instances within a given host are running as the same
+     * plugin type, so we can make this variable global. */
+    enum y_plugin_mode     plugin_mode;
+
     grain_envelope_data_t *grain_envelope;    /* array of grain envelopes */
 
     pthread_mutex_t        sampleset_mutex;
