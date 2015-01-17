@@ -33,6 +33,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <inttypes.h>
 
 #include <ladspa.h>
 #include <dssi.h>
@@ -765,6 +766,7 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
     unsigned long samples_done = 0;
     unsigned long event_index = 0;
     unsigned long burst_size;
+    LV2_Atom_Event* event = lv2_atom_sequence_begin(&synth->control_port->body);
 
     /* attempt the mutex, return only silence if lock fails. */
     if (dssp_voicelist_mutex_trylock(synth)) {
@@ -788,7 +790,6 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
         }
 
         /* process any ready LV2 events */
-        LV2_Atom_Event* event = lv2_atom_sequence_begin(&synth->control_port->body);
         while (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
                && event->time.frames == samples_done) {
             if (event->body.type == synth->uris.midi_Event) {
