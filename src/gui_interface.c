@@ -1829,6 +1829,7 @@ void initialize_callback_data(struct y_ui_callback_data_t* callback_data, struct
     }
 }
 
+#if LV2_ENABLED
 void set_lv2_write_function(struct y_ui_callback_data_t* callback_data, LV2UI_Write_Function function)
 {
     for (int i = 0; i < Y_PORTS_COUNT; ++i) {
@@ -1842,6 +1843,7 @@ void set_lv2_controller(struct y_ui_callback_data_t* callback_data, LV2UI_Contro
         callback_data[i].lv2_controller = controller;
     }
 }
+#endif
 
 
 void

@@ -21,8 +21,15 @@
 #ifndef _GUI_INTERFACE_H
 #define _GUI_INTERFACE_H
 
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif
+
 #include <gtk/gtk.h>
-#include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
+
+#if LV2_ENABLED
+#   include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
+#endif
 
 extern GtkWidget *main_window;
 extern GtkObject *main_test_note_key_adj;
@@ -141,15 +148,19 @@ extern enum y_plugin_mode plugin_mode;
 //    structs describing the UI elements.
 struct y_ui_callback_data_t {
     int index;
+#if LV2_ENABLED
     LV2UI_Write_Function lv2_write_function;
     LV2UI_Controller lv2_controller;
+#endif
     struct voice_widgets* voice_widgets;
 };
 
 void create_windows(const char *instance_tag, struct y_ui_callback_data_t* callback_data);
 void create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data);
+#if LV2_ENABLED
 void set_lv2_write_function(struct y_ui_callback_data_t* callback_data, LV2UI_Write_Function function);
 void set_lv2_controller(struct y_ui_callback_data_t* callback_data, LV2UI_Controller controller);
+#endif
 
 
 #endif /* _GUI_INTERFACE_H */

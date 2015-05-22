@@ -478,8 +478,10 @@ on_voice_knob_change( GtkWidget *widget, gpointer data )
 
     if (plugin_mode == Y_DSSI)
         lo_send(osc_host_address, osc_control_path, "if", callback_data->index, value);
+#if LV2_ENABLED
     else if (plugin_mode == Y_LV2)
         callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &value);
+#endif
 }
 
 void
@@ -551,11 +553,13 @@ on_voice_detent_change( GtkWidget *widget, gpointer data )
 
     if (plugin_mode == Y_DSSI)
         lo_send(osc_host_address, osc_control_path, "if", callback_data->index, (float)value);
+#if LV2_ENABLED
     else if (plugin_mode == Y_LV2)
     {
         float floatValue = (float)value;
         callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &floatValue);
     }
+#endif
 }
 
 void
@@ -569,11 +573,13 @@ on_voice_onoff_toggled( GtkWidget *widget, gpointer data )
 
     if (plugin_mode == Y_DSSI)
         lo_send(osc_host_address, osc_control_path, "if", callback_data->index, (state ? 1.0f : 0.0f));
+#if LV2_ENABLED
     else if (plugin_mode == Y_LV2)
     {
         float value = state? 1.0f : 0.0f;
         callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &value);
     }
+#endif
 }
 
 void
@@ -596,11 +602,13 @@ on_voice_combo_change( GtkWidget *widget, gpointer data )
 
     if (plugin_mode == Y_DSSI)
         lo_send(osc_host_address, osc_control_path, "if", callback_data->index, (float)value);
+#if LV2_ENABLED
     else if (plugin_mode == Y_LV2)
     {
         float floatValue = (float)value;
         callback_data->lv2_write_function(callback_data->lv2_controller, callback_data->index, sizeof(float), 0, &floatValue);
     }
+#endif
 
     check_for_layout_update_on_port_change(callback_data->index, callback_data);
 }
@@ -1583,8 +1591,10 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
     {
         if (plugin_mode == Y_DSSI)
             lo_send(osc_host_address, osc_control_path, "if", port, value);
+#if LV2_ENABLED
         else if (plugin_mode == Y_LV2)
             callback_data->lv2_write_function(callback_data->lv2_controller, port, sizeof(float), 0, &value);
+#endif
     }
 }
 

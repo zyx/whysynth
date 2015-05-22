@@ -9,5 +9,5 @@
 
 <http://smbolton.com/whysynth#ui>
 	a ui:GtkUI ;
-	ui:binary <whysynth/WhySynth_gtk> ;
+	ui:binary <WhySynth_gtk> ;
 	rdfs:seeAlso <whysynth.ttl> .

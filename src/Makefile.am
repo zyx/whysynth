@@ -6,9 +6,13 @@ else
 ui_PROGRAMS =
 endif
 
+if BUILD_LV2_GUI
+uidir = $(libdir)/lv2/whysynth.lv2
+plugindir = $(libdir)/lv2/whysynth.lv2
+else
 uidir = $(libdir)/dssi/whysynth
-
 plugindir = $(libdir)/dssi
+endif
 
 plugin_LTLIBRARIES = whysynth.la
 
@@ -81,9 +85,12 @@ whysynth_la_SOURCES = \
 	whysynth_voice.c \
 	whysynth_voice.h \
 	whysynth_voice_inline.h \
-	whysynth_voice_render.c
+	whysynth_voice_render.c \
+	uris.h
 
-plugin_DATA = manifest.ttl whysynth.ttl
+if BUILD_LV2_GUI
+dist_plugin_DATA = manifest.ttl whysynth.ttl
+endif
 
 if DARWIN
 whysynth_la_CFLAGS = -DY_PLUGIN $(AM_CFLAGS) $(PLUGIN_CFLAGS) -DY_BOGUS_MLOCKALL

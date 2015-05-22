@@ -22,6 +22,25 @@ PKG_CHECK_MODULES(COMMON, dssi >= 0.9)
 PKG_CHECK_MODULES(PLUGIN, fftw3f >= 3.0.1)
 PKG_CHECK_MODULES(GUI, liblo >= 0.12)
 
+dnl If LV2 is available, build as an LV2 plugin
+PKG_CHECK_MODULES(LV2_DEPS, lv2core >= 6, LV2_FOUND="yes", LV2_FOUND="no")
+
+LV2_ENABLED=$LV2_FOUND
+if test "$LV2_FOUND" = "yes"; then
+  AC_MSG_CHECKING([whether to allow LV2])
+  AC_ARG_WITH(lv2,
+    AC_HELP_STRING([--without-lv2],[disable LV2 interface]),
+      [if test "$withval" = "no"; then LV2_ENABLED="no"; fi],[])
+  AC_MSG_RESULT($LV2_ENABLED)
+  if test "$LV2_ENABLED" = "yes"; then
+      AC_DEFINE([LV2_ENABLED],[1],[Build WhySynth as an LV2 plugin])
+  else
+      AC_DEFINE([LV2_ENABLED],[0],[Build WhySynth as an LV2 plugin])
+  fi
+fi
+AM_CONDITIONAL(BUILD_LV2_GUI, test "$LV2_ENABLED" = 'yes')
+
+
 dnl Check for GTK+
 with_gtk=no
 AM_PATH_GTK_2_0(2.4.0, with_gtk='yes', AC_MSG_WARN([GUI will not be built; GTK+ 2.4 or later needed]))

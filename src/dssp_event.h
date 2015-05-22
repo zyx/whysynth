@@ -26,18 +26,25 @@
 #ifndef _DSSP_EVENT_H
 #define _DSSP_EVENT_H
 
+#ifdef HAVE_CONFIG_H
+#   include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <pthread.h>
 
 #include <ladspa.h>
 #include <dssi.h>
-#include "lv2/lv2plug.in/ns/ext/atom/util.h"
-#include "lv2/lv2plug.in/ns/ext/urid/urid.h"
+
+#if LV2_ENABLED
+#   include "lv2/lv2plug.in/ns/ext/atom/util.h"
+#   include "lv2/lv2plug.in/ns/ext/urid/urid.h"
+#   include "uris.h"
+#endif
 
 #include "whysynth_types.h"
 #include "whysynth.h"
 #include "whysynth_voice.h"
-#include "uris.h"
 
 #define Y_MONO_MODE_OFF  0
 #define Y_MONO_MODE_ON   1
@@ -201,12 +208,14 @@ struct _y_synth_t {
     LADSPA_Data    *modmix_mod2_amt;
     LADSPA_Data    *tuning;
 
+#if LV2_ENABLED
     /* LV2 ports */
     const LV2_Atom_Sequence *control_port; 
 
     /* LV2 URIs */
     y_URIs_t        uris;
     LV2_URID_Map    *map;
+#endif
 
     /* reusable pre-mixdown voice buffers */
     float           vcf1_out[Y_CONTROL_PERIOD],

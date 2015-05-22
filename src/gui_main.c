@@ -36,14 +36,16 @@
 #include <lo/lo.h>
 #include <dssi.h>
  
-#include "lv2/lv2plug.in/ns/ext/atom/atom.h"
-#include "lv2/lv2plug.in/ns/ext/atom/forge.h"
-#include "lv2/lv2plug.in/ns/ext/atom/util.h"
-#include "lv2/lv2plug.in/ns/ext/patch/patch.h"
-#include "lv2/lv2plug.in/ns/ext/urid/urid.h"
-#include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
+#if LV2_ENABLED
+#   include "lv2/lv2plug.in/ns/ext/atom/atom.h"
+#   include "lv2/lv2plug.in/ns/ext/atom/forge.h"
+#   include "lv2/lv2plug.in/ns/ext/atom/util.h"
+#   include "lv2/lv2plug.in/ns/ext/patch/patch.h"
+#   include "lv2/lv2plug.in/ns/ext/urid/urid.h"
+#   include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
+#   include "./uris.h"
+#endif
 
-#include "./uris.h"
 
 #include "whysynth_types.h"
 #include "whysynth.h"
@@ -468,6 +470,7 @@ main(int argc, char *argv[])
     return 0;
 }
 
+#if LV2_ENABLED
 static LV2UI_Handle
 instantiate(const LV2UI_Descriptor*   descriptor,
             const char*               plugin_uri,
@@ -544,3 +547,4 @@ lv2ui_descriptor(uint32_t index)
 		return NULL;
 	}
 }
+#endif // LV2_ENABLED

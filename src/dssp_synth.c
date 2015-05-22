@@ -38,8 +38,10 @@
 #include <ladspa.h>
 #include <dssi.h>
 
-#include "lv2/lv2plug.in/ns/ext/midi/midi.h"
-#include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#if LV2_ENABLED
+#   include "lv2/lv2plug.in/ns/ext/midi/midi.h"
+#   include "lv2/lv2plug.in/ns/lv2core/lv2.h"
+#endif
 
 #include "whysynth_types.h"
 #include "whysynth.h"
@@ -57,7 +59,9 @@ y_global_t             global;
 
 static LADSPA_Descriptor *y_LADSPA_descriptor = NULL;
 static DSSI_Descriptor   *y_DSSI_descriptor = NULL;
+#if LV2_ENABLED
 static LV2_Descriptor    *y_LV2_descriptor = NULL;
+#endif
 
 static void y_cleanup(LADSPA_Handle instance);
 static void y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
@@ -773,9 +777,11 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
     unsigned long event_index = 0;
     unsigned long burst_size;
 
+#if LV2_ENABLED
     LV2_Atom_Event* event;
     if (global.plugin_mode == Y_LV2)
         event = lv2_atom_sequence_begin(&synth->control_port->body);
+#endif
 
     /* attempt the mutex, return only silence if lock fails. */
     if (dssp_voicelist_mutex_trylock(synth)) {
@@ -799,6 +805,7 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
                 event_index++;
             }
         }
+#if LV2_ENABLED
         else if (global.plugin_mode == Y_LV2) {
             /* process any ready LV2 events */
             while (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
@@ -821,6 +828,7 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
                 event = lv2_atom_sequence_next(event);
             }
         }
+#endif
 
         /* calculate the sample count (burst_size) for the next
          * y_voice_render() call to be the smallest of:
@@ -843,12 +851,15 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
             && events[event_index].time.tick - samples_done < burst_size) {
             /* reduce burst size to end when next DSSI event is ready */
             burst_size = events[event_index].time.tick - samples_done;
-        } else if (global.plugin_mode == Y_LV2
+        }
+#if LV2_ENABLED
+        else if (global.plugin_mode == Y_LV2
                    && ! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
                    && event->time.frames - samples_done < burst_size) {
             /* reduce burst size to end when next LV2 event is ready */
             burst_size = event->time.frames - samples_done;
         }
+#endif
 
         if (sample_count - samples_done < burst_size) {
             /* reduce burst size to end at end of this run */
@@ -878,6 +889,7 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
 
 
 /* ---- LV2 interface ---- */
+#if LV2_ENABLED
 
 LV2_Handle
 y_LV2_instantiate(const struct _LV2_Descriptor * descriptor,
@@ -934,6 +946,8 @@ y_LV2_cleanup(LV2_Handle instance)
     y_cleanup((LADSPA_Handle)instance);
 }
 
+#endif
+
 /* ---- export ---- */
 
 const LADSPA_Descriptor *ladspa_descriptor(unsigned long index)
@@ -956,6 +970,7 @@ const DSSI_Descriptor *dssi_descriptor(unsigned long index)
     }
 }
 
+#if LV2_ENABLED
 LV2_SYMBOL_EXPORT
 const LV2_Descriptor* lv2_descriptor(uint32_t index)
 {
@@ -966,6 +981,7 @@ const LV2_Descriptor* lv2_descriptor(uint32_t index)
 		return NULL;
 	}
 }
+#endif
 
 #ifdef __GNUC__
 __attribute__((constructor)) void init()
@@ -1053,6 +1069,7 @@ void _init()
         y_DSSI_descriptor->run_multiple_synths_adding = NULL;
     }
 
+#if LV2_ENABLED
     y_LV2_descriptor = (LV2_Descriptor *) malloc(sizeof(LV2_Descriptor));
     if (y_LV2_descriptor) {
         y_LV2_descriptor->URI = WHYSYNTH_URI;
@@ -1064,6 +1081,7 @@ void _init()
         y_LV2_descriptor->cleanup = y_LV2_cleanup;
         y_LV2_descriptor->extension_data = NULL;
     }
+#endif
 }
 
 #ifdef __GNUC__
@@ -1081,8 +1099,10 @@ void _fini()
     if (y_DSSI_descriptor) {
         free(y_DSSI_descriptor);
     }
+#if LV2_ENABLED
     if (y_LV2_descriptor) {
         free(y_LV2_descriptor);
     }
+#endif
 }
 
