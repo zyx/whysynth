@@ -7,9 +7,9 @@
 
 
 <http://smbolton.com/whysynth#ui>
-	a ui:GtkUI ;
-	lv2:requiredFeature urid:map ;
-	lv2:extensionData ui:showInterface .
+    a ui:GtkUI ;
+    lv2:requiredFeature urid:map ;
+    lv2:extensionData ui:showInterface .
 
 <http://smbolton.com/whysynth>
     a lv2:Plugin ;

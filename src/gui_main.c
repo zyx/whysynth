@@ -529,22 +529,22 @@ port_event(LV2UI_Handle handle,
 }
 
 static const LV2UI_Descriptor descriptor = {
-	WHYSYNTH_UI_URI,
-	instantiate,
-	cleanup,
-	port_event,
-	NULL
+    WHYSYNTH_UI_URI,
+    instantiate,
+    cleanup,
+    port_event,
+    NULL
 };
 
 LV2_SYMBOL_EXPORT
 const LV2UI_Descriptor*
 lv2ui_descriptor(uint32_t index)
 {
-	switch (index) {
-	case 0:
-		return &descriptor;
-	default:
-		return NULL;
-	}
+    switch (index) {
+    case 0:
+        return &descriptor;
+    default:
+        return NULL;
+    }
 }
 #endif // LV2_ENABLED

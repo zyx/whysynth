@@ -549,8 +549,8 @@ y_synth_handle_load(y_synth_t *synth, const char *value)
     YDB_MESSAGE(YDB_DATA, " y_synth_handle_load: attempting to load '%s'\n", value);
 
     if (!(file = y_data_locate_patch_file(value, synth->project_dir))) {
-	return dssi_configure_message("load error: could not find file '%s'",
-				      value);
+        return dssi_configure_message("load error: could not find file '%s'",
+                                      value);
     }
 
     if ((rv = y_data_load(synth, file)) != NULL) {
@@ -559,13 +559,13 @@ y_synth_handle_load(y_synth_t *synth, const char *value)
     }
 
     if (strcmp(file, value)) {
-	rv = dssi_configure_message("warning: patch file '%s' not found, loaded '%s' instead",
+        rv = dssi_configure_message("warning: patch file '%s' not found, loaded '%s' instead",
                                     value, file);
-	free(file);
-	return rv;
+        free(file);
+        return rv;
     } else {
-	free(file);
-	return NULL;
+        free(file);
+        return NULL;
     }
 }
 

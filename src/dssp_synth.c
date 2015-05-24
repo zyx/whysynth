@@ -974,12 +974,12 @@ const DSSI_Descriptor *dssi_descriptor(unsigned long index)
 LV2_SYMBOL_EXPORT
 const LV2_Descriptor* lv2_descriptor(uint32_t index)
 {
-	switch (index) {
-	case 0:
-		return y_LV2_descriptor;
-	default:
-		return NULL;
-	}
+    switch (index) {
+    case 0:
+        return y_LV2_descriptor;
+    default:
+        return NULL;
+    }
 }
 #endif
 
