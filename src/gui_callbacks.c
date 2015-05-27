@@ -308,7 +308,17 @@ on_save_file_chooser_response(GtkDialog *dialog, gint response, gpointer data)
             set_file_chooser_path(GTK_FILE_CHOOSER(open_file_chooser), filename);
 
 #ifdef DEVELOPER
-        if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (save_file_c_mode_button))) {
+        if (g_strcmp0(gtk_combo_box_get_active_text (GTK_COMBO_BOX (save_file_c_mode_button)), "LV2") == 0) {
+            if (gui_data_save_as_lv2(filename, save_file_start, save_file_end, &message)) {
+
+                display_notice("Save Patches as 'LV2' succeeded:", message);
+
+            } else {  /* problem with save */
+
+                display_notice("Save Patches as 'LV2' failed:", message);
+
+            }
+        } else if (g_strcmp0(gtk_combo_box_get_active_text (GTK_COMBO_BOX (save_file_c_mode_button)), "C") == 0) {
             if (gui_data_save_as_c(filename, save_file_start, save_file_end, &message)) {
 
                 display_notice("Save Patches as 'C' succeeded:", message);

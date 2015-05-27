@@ -933,10 +933,14 @@ create_save_file_chooser (const char *tag)
     hbox = gtk_hbox_new (FALSE, 0);
     gtk_box_pack_start (GTK_BOX (vbox), hbox, TRUE, TRUE, 6);
 
-    label7 = gtk_label_new ("Save as 'C':");
+    label7 = gtk_label_new ("Save as:");
     gtk_box_pack_start (GTK_BOX (hbox), label7, FALSE, FALSE, 0);
 
-    save_file_c_mode_button = gtk_check_button_new ();
+    save_file_c_mode_button = gtk_combo_box_new_text ();
+    gtk_combo_box_append_text(GTK_COMBO_BOX(save_file_c_mode_button), "Whysynth Patch");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(save_file_c_mode_button), "C");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(save_file_c_mode_button), "LV2");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(save_file_c_mode_button), 0);
     gtk_box_pack_start (GTK_BOX (hbox), save_file_c_mode_button, FALSE, FALSE, 6);
 #endif /* DEVELOPER */
     
