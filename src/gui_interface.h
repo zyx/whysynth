@@ -164,4 +164,3 @@ void set_lv2_controller(struct y_ui_callback_data_t* callback_data, LV2UI_Contro
 
 
 #endif /* _GUI_INTERFACE_H */
-

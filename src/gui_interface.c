@@ -38,6 +38,7 @@
 #include "gui_images.h"
 #include "agran_oscillator.h"
 #include "wave_tables.h"
+#include "dssp_event.h"
 
 GtkWidget *main_window;
 GtkObject *main_test_note_key_adj;
@@ -116,8 +117,24 @@ set_window_title(GtkWidget *window, const char *tag, const char *text)
     free(title);
 }
 
-void create_configuration_tab(GtkWidget* notebook)
+static void   /* a GtkCellLayoutDataFunc for combos */
+cmodel_only_leaves_sensitive(GtkCellLayout   *cell_layout,
+                             GtkCellRenderer *cell,
+                             GtkTreeModel    *tree_model,
+                             GtkTreeIter     *iter,
+                             gpointer         data)
 {
+    gboolean sensitive;
+
+    sensitive = !gtk_tree_model_iter_has_child (tree_model, iter);
+
+    g_object_set (cell, "sensitive", sensitive, NULL);
+}
+
+void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* callback_data)
+{
+    struct voice_widgets* voice_widgets = callback_data->voice_widgets;
+
     GtkWidget *frame = gtk_frame_new ("Configuration");
     gtk_widget_ref (frame);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "frame14", frame,
@@ -135,6 +152,7 @@ void create_configuration_tab(GtkWidget* notebook)
     gtk_table_set_row_spacings (GTK_TABLE (configuration_table), 5);
     gtk_table_set_col_spacings (GTK_TABLE (configuration_table), 5);
 
+
     GtkWidget *label54 = gtk_label_new ("Tuning");
     gtk_widget_ref (label54);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "label54", label54,
@@ -146,6 +164,7 @@ void create_configuration_tab(GtkWidget* notebook)
     gtk_misc_set_alignment (GTK_MISC (label54), 0, 0.5);
 
     tuning_adj = gtk_adjustment_new (440, 415.3, 467.2, 0.1, 1, 0);
+    voice_widgets[Y_PORT_TUNING].adjustment = tuning_adj;
     GtkWidget *tuning_spin = gtk_spin_button_new (GTK_ADJUSTMENT (tuning_adj), 1, 1);
     gtk_widget_ref (tuning_spin);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "tuning_spin", tuning_spin,
@@ -168,6 +187,7 @@ void create_configuration_tab(GtkWidget* notebook)
     gtk_misc_set_alignment (GTK_MISC (label43), 0, 0.5);
 
     polyphony_adj = gtk_adjustment_new (Y_DEFAULT_POLYPHONY, 1, Y_MAX_POLYPHONY, 1, 10, 0);
+    voice_widgets[Y_PORT_POLYPHONY].adjustment = polyphony_adj;
     GtkWidget *polyphony = gtk_spin_button_new (GTK_ADJUSTMENT (polyphony_adj), 1, 0);
     gtk_widget_ref (polyphony);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "polyphony", polyphony,
@@ -176,6 +196,7 @@ void create_configuration_tab(GtkWidget* notebook)
     gtk_table_attach (GTK_TABLE (configuration_table), polyphony, 1, 2, 1, 2,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
+
 
     GtkWidget *label44 = gtk_label_new ("Monophonic Mode");
     gtk_widget_ref (label44);
@@ -187,28 +208,26 @@ void create_configuration_tab(GtkWidget* notebook)
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
 
-    monophonic_option_menu = gtk_option_menu_new ();
-    gtk_widget_ref (monophonic_option_menu);
+    monophonic_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(combomodel[Y_COMBOMODEL_TYPE_MONOPHONIC_MODE]));
+    gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer, FALSE);
+    gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer,
+                                       cmodel_only_leaves_sensitive, NULL, NULL);
+    gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer, "text", 0);
+    g_object_set_qdata(G_OBJECT(monophonic_option_menu), combo_value_quark, (gpointer)0);
+    g_object_set_qdata(G_OBJECT(monophonic_option_menu), combo_combomodel_type_quark, (gpointer)Y_COMBOMODEL_TYPE_MONOPHONIC_MODE);
+    gtk_widget_show (monophonic_option_menu);
+    voice_widgets[Y_PORT_MONOPHONIC_MODE].widget = monophonic_option_menu;
+    if (plugin_mode == Y_DSSI) {
+        g_signal_connect(G_OBJECT(monophonic_option_menu), "changed", G_CALLBACK(on_mono_mode_activate), (gpointer)&callback_data[Y_PORT_MONOPHONIC_MODE]);
+    } else if (plugin_mode == Y_LV2) {
+        g_signal_connect(G_OBJECT(monophonic_option_menu), "changed", G_CALLBACK(on_voice_combo_change), (gpointer)&callback_data[Y_PORT_MONOPHONIC_MODE]);
+    }
     gtk_object_set_data_full (GTK_OBJECT (main_window), "monophonic_option_menu", monophonic_option_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (monophonic_option_menu);
     gtk_table_attach (GTK_TABLE (configuration_table), monophonic_option_menu, 1, 2, 2, 3,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
-    GtkWidget *optionmenu5_menu = gtk_menu_new ();
-    GtkWidget *mono_mode_off = gtk_menu_item_new_with_label ("Off");
-    gtk_widget_show (mono_mode_off);
-    gtk_menu_append (GTK_MENU (optionmenu5_menu), mono_mode_off);
-    GtkWidget *mono_mode_on = gtk_menu_item_new_with_label ("On");
-    gtk_widget_show (mono_mode_on);
-    gtk_menu_append (GTK_MENU (optionmenu5_menu), mono_mode_on);
-    GtkWidget *mono_mode_once = gtk_menu_item_new_with_label ("Once");
-    gtk_widget_show (mono_mode_once);
-    gtk_menu_append (GTK_MENU (optionmenu5_menu), mono_mode_once);
-    GtkWidget *mono_mode_both = gtk_menu_item_new_with_label ("Both");
-    gtk_widget_show (mono_mode_both);
-    gtk_menu_append (GTK_MENU (optionmenu5_menu), mono_mode_both);
-    gtk_option_menu_set_menu (GTK_OPTION_MENU (monophonic_option_menu), optionmenu5_menu);
+
 
     GtkWidget *glide_mode_label = gtk_label_new ("Glide Mode");
     gtk_widget_ref (glide_mode_label);
@@ -220,31 +239,26 @@ void create_configuration_tab(GtkWidget* notebook)
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (glide_mode_label), 0, 0.5);
 
-    glide_option_menu = gtk_option_menu_new ();
-    gtk_widget_ref (glide_option_menu);
+    glide_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(combomodel[Y_COMBOMODEL_TYPE_GLIDE_MODE]));
+    gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer, FALSE);
+    gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer,
+                                       cmodel_only_leaves_sensitive, NULL, NULL);
+    gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer, "text", 0);
+    g_object_set_qdata(G_OBJECT(glide_option_menu), combo_value_quark, (gpointer)0);
+    g_object_set_qdata(G_OBJECT(glide_option_menu), combo_combomodel_type_quark, (gpointer)Y_COMBOMODEL_TYPE_GLIDE_MODE);
+    gtk_widget_show (glide_option_menu);
+    voice_widgets[Y_PORT_GLIDE_MODE].widget = glide_option_menu;
+    if (plugin_mode == Y_DSSI) {
+        g_signal_connect(G_OBJECT(glide_option_menu), "changed", G_CALLBACK(on_glide_mode_activate), (gpointer)&callback_data[Y_PORT_GLIDE_MODE]);
+    } else if (plugin_mode == Y_LV2) {
+        g_signal_connect(G_OBJECT(glide_option_menu), "changed", G_CALLBACK(on_voice_combo_change), (gpointer)&callback_data[Y_PORT_GLIDE_MODE]);
+    }
     gtk_object_set_data_full (GTK_OBJECT (main_window), "glide_option_menu", glide_option_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (glide_option_menu);
     gtk_table_attach (GTK_TABLE (configuration_table), glide_option_menu, 1, 2, 3, 4,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
-    GtkWidget *glide_menu = gtk_menu_new ();
-    GtkWidget *glide_mode_legato = gtk_menu_item_new_with_label ("Legato Only");
-    gtk_widget_show (glide_mode_legato);
-    gtk_menu_append (GTK_MENU (glide_menu), glide_mode_legato);
-    GtkWidget *glide_mode_initial = gtk_menu_item_new_with_label ("Non-legato Only");
-    gtk_widget_show (glide_mode_initial);
-    gtk_menu_append (GTK_MENU (glide_menu), glide_mode_initial);
-    GtkWidget *glide_mode_always = gtk_menu_item_new_with_label ("Always");
-    gtk_widget_show (glide_mode_always);
-    gtk_menu_append (GTK_MENU (glide_menu), glide_mode_always);
-    GtkWidget *glide_mode_leftover = gtk_menu_item_new_with_label ("Leftover");
-    gtk_widget_show (glide_mode_leftover);
-    gtk_menu_append (GTK_MENU (glide_menu), glide_mode_leftover);
-    GtkWidget *glide_mode_off = gtk_menu_item_new_with_label ("Off");
-    gtk_widget_show (glide_mode_off);
-    gtk_menu_append (GTK_MENU (glide_menu), glide_mode_off);
-    gtk_option_menu_set_menu (GTK_OPTION_MENU (glide_option_menu), glide_menu);
+
 
     // There's no 'program change' event when running as a LV2 plugin,
     // so we only add this check button when running as a DSSI plugin.
@@ -276,38 +290,12 @@ void create_configuration_tab(GtkWidget* notebook)
     }
 
     gtk_signal_connect (GTK_OBJECT (tuning_adj), "value_changed",
-                        GTK_SIGNAL_FUNC(on_tuning_change),
-                        NULL);
+                        GTK_SIGNAL_FUNC (on_tuning_change),
+                        (gpointer)&callback_data[Y_PORT_TUNING]);
+
     gtk_signal_connect (GTK_OBJECT (gtk_spin_button_get_adjustment (GTK_SPIN_BUTTON (polyphony))),
                         "value_changed", GTK_SIGNAL_FUNC(on_polyphony_change),
-                        NULL);
-    gtk_signal_connect (GTK_OBJECT (mono_mode_off), "activate",
-                        GTK_SIGNAL_FUNC (on_mono_mode_activate),
-                        (gpointer)"off");
-    gtk_signal_connect (GTK_OBJECT (mono_mode_on), "activate",
-                        GTK_SIGNAL_FUNC (on_mono_mode_activate),
-                        (gpointer)"on");
-    gtk_signal_connect (GTK_OBJECT (mono_mode_once), "activate",
-                        GTK_SIGNAL_FUNC (on_mono_mode_activate),
-                        (gpointer)"once");
-    gtk_signal_connect (GTK_OBJECT (mono_mode_both), "activate",
-                        GTK_SIGNAL_FUNC (on_mono_mode_activate),
-                        (gpointer)"both");
-    gtk_signal_connect (GTK_OBJECT (glide_mode_legato), "activate",
-                        GTK_SIGNAL_FUNC (on_glide_mode_activate),
-                        (gpointer)"legato");
-    gtk_signal_connect (GTK_OBJECT (glide_mode_initial), "activate",
-                        GTK_SIGNAL_FUNC (on_glide_mode_activate),
-                        (gpointer)"initial");
-    gtk_signal_connect (GTK_OBJECT (glide_mode_always), "activate",
-                        GTK_SIGNAL_FUNC (on_glide_mode_activate),
-                        (gpointer)"always");
-    gtk_signal_connect (GTK_OBJECT (glide_mode_leftover), "activate",
-                        GTK_SIGNAL_FUNC (on_glide_mode_activate),
-                        (gpointer)"leftover");
-    gtk_signal_connect (GTK_OBJECT (glide_mode_off), "activate",
-                        GTK_SIGNAL_FUNC (on_glide_mode_activate),
-                        (gpointer)"off");
+                        (gpointer)&callback_data[Y_PORT_POLYPHONY]);
 
     GtkWidget *frame15 = gtk_frame_new (NULL);
     gtk_widget_ref (frame15);
@@ -377,6 +365,9 @@ create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
     GtkWidget *test_note_button;
     GtkAccelGroup *accel_group;
     GdkPixbuf *icon;
+
+    /* create combo models */
+    create_edit_combo_models();
 
     if ((icon = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(),
                                          "whysynth", 32, 0, NULL)) != NULL) {
@@ -571,7 +562,7 @@ create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
 
     /* Configuration tab */
 
-    create_configuration_tab(notebook1);
+    create_configuration_tab(notebook1, callback_data);
 
     test_note_frame = gtk_frame_new ("Test Note");
     gtk_widget_ref (test_note_frame);
@@ -589,7 +580,7 @@ create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
     gtk_container_set_border_width (GTK_CONTAINER (test_note_table), 2);
     gtk_table_set_row_spacings (GTK_TABLE (test_note_table), 1);
     gtk_table_set_col_spacings (GTK_TABLE (test_note_table), 5);
-  
+
     test_note_key_label = gtk_label_new ("key");
     gtk_widget_ref (test_note_key_label);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_key_label", test_note_key_label,
@@ -599,7 +590,7 @@ create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (test_note_key_label), 0, 0.5);
-  
+
     test_note_velocity_label = gtk_label_new ("velocity");
     gtk_widget_ref (test_note_velocity_label);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_velocity_label", test_note_velocity_label,
@@ -609,7 +600,7 @@ create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (test_note_velocity_label), 0, 0.5);
-  
+
     test_note_button = gtk_button_new_with_label ("Send Test Note");
     gtk_widget_ref (test_note_button);
     gtk_object_set_data_full (GTK_OBJECT (main_window), "main_test_note_button", test_note_button,
@@ -788,7 +779,7 @@ create_open_file_chooser (const char *tag)
                         GTK_SIGNAL_FUNC(gtk_main_quit), NULL);
     gtk_signal_connect (GTK_OBJECT (open_file_chooser), "delete_event",
                         (GtkSignalFunc)gtk_widget_hide_on_delete, NULL);
-    gtk_signal_connect (GTK_OBJECT (open_file_chooser), "response", 
+    gtk_signal_connect (GTK_OBJECT (open_file_chooser), "response",
                         (GtkSignalFunc) on_open_file_chooser_response,
                         NULL);
 
@@ -861,7 +852,7 @@ create_save_file_chooser (const char *tag)
                         GTK_SIGNAL_FUNC(gtk_main_quit), NULL);
     gtk_signal_connect (GTK_OBJECT (save_file_chooser), "delete_event",
                         (GtkSignalFunc)gtk_widget_hide_on_delete, NULL);
-    gtk_signal_connect (GTK_OBJECT (save_file_chooser), "response", 
+    gtk_signal_connect (GTK_OBJECT (save_file_chooser), "response",
                         (GtkSignalFunc) on_save_file_chooser_response,
                         NULL);
 
@@ -929,7 +920,7 @@ create_save_file_chooser (const char *tag)
     gtk_combo_box_set_active(GTK_COMBO_BOX(save_file_c_mode_button), 0);
     gtk_box_pack_start (GTK_BOX (hbox), save_file_c_mode_button, FALSE, FALSE, 6);
 #endif /* DEVELOPER */
-    
+
     gtk_widget_show_all (vbox);
     gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(save_file_chooser), vbox);
 
@@ -970,7 +961,7 @@ create_import_file_chooser (void)
                         GTK_SIGNAL_FUNC(gtk_main_quit), NULL);
     gtk_signal_connect (GTK_OBJECT (import_file_chooser), "delete_event",
                         (GtkSignalFunc)gtk_widget_hide_on_delete, NULL);
-    gtk_signal_connect (GTK_OBJECT (import_file_chooser), "response", 
+    gtk_signal_connect (GTK_OBJECT (import_file_chooser), "response",
                         (GtkSignalFunc) on_import_file_chooser_response,
                         NULL);
 
@@ -1227,20 +1218,6 @@ cmodel_finish(GtkTreeStore *m, int type)
     combomodel[type] = m;
 }
 
-static void   /* a GtkCellLayoutDataFunc for combos */
-cmodel_only_leaves_sensitive(GtkCellLayout   *cell_layout,
-                             GtkCellRenderer *cell,
-                             GtkTreeModel    *tree_model,
-                             GtkTreeIter     *iter,
-                             gpointer         data)
-{
-    gboolean sensitive;
-
-    sensitive = !gtk_tree_model_iter_has_child (tree_model, iter);
-
-    g_object_set (cell, "sensitive", sensitive, NULL);
-}
-
 void
 create_edit_combo_models(void)
 {
@@ -1495,6 +1472,27 @@ create_edit_combo_models(void)
     cmodel_add(m, "Hold",          0, 11);
 
     cmodel_finish(m, Y_COMBOMODEL_TYPE_EG_SHAPE);
+
+    /* Monophonic mode */
+    m = cmodel_new();
+
+    cmodel_add(m, "Off",      0,  Y_MONO_MODE_OFF);
+    cmodel_add(m, "On",       0,  Y_MONO_MODE_ON);
+    cmodel_add(m, "Once",     0,  Y_MONO_MODE_ONCE);
+    cmodel_add(m, "Both",     0,  Y_MONO_MODE_BOTH);
+
+    cmodel_finish(m, Y_COMBOMODEL_TYPE_MONOPHONIC_MODE);
+
+    /* Glide mode */
+    m = cmodel_new();
+
+    cmodel_add(m, "Legato Only",     0, Y_GLIDE_MODE_LEGATO);
+    cmodel_add(m, "Non-legato Only", 0, Y_GLIDE_MODE_INITIAL);
+    cmodel_add(m, "Always",          0, Y_GLIDE_MODE_ALWAYS);
+    cmodel_add(m, "Leftover",        0, Y_GLIDE_MODE_LEFTOVER);
+    cmodel_add(m, "Off",             0, Y_GLIDE_MODE_OFF);
+
+    cmodel_finish(m, Y_COMBOMODEL_TYPE_GLIDE_MODE);
 }
 
 GtkWidget *
@@ -1808,11 +1806,22 @@ create_edit_place_copy_paste_buttons(int port,
                         (gpointer)&callback_data[port]);
 }
 
-// Initialize an array of y_ui_callback_data_t structs. indexes are simply
-// assigned sequentially from 0 to Y_PORTS_COUNT, all voice_widgets pointers
-// point to a single voice_widgets array, given by the voice_widgets argument.
-void initialize_callback_data(struct y_ui_callback_data_t* callback_data, struct voice_widgets* voice_widgets)
+// Initialize the callback_data structure. This includes allocating the voice_widgets structure.
+// Indexes in callback_data are simply assigned sequentially from 0 to Y_PORTS_COUNT, all
+// voice_widgets pointers point to the single voice_widgets array for convenience when being
+// accessed by a callback function.
+void initialize_callback_data_and_voice_widgets(struct y_ui_callback_data_t* callback_data)
 {
+    struct voice_widgets* voice_widgets = malloc(sizeof(struct voice_widgets) * (Y_PORTS_COUNT));
+    for (int port = 0; port < Y_PORTS_COUNT; port++) {
+        voice_widgets[port].widget = NULL;
+        voice_widgets[port].adjustment = NULL;
+        voice_widgets[port].top_label = NULL;
+        voice_widgets[port].label1 = NULL;
+        voice_widgets[port].label2 = NULL;
+        voice_widgets[port].last_mode = -1;
+    }
+
     for (int i = 0; i < Y_PORTS_COUNT; ++i) {
         callback_data[i].index = i;
         callback_data[i].voice_widgets = voice_widgets;
@@ -1839,7 +1848,6 @@ void set_lv2_controller(struct y_ui_callback_data_t* callback_data, LV2UI_Contro
 void
 create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
 {
-    int port;
     GtkWidget *vbox = NULL;
     GtkWidget *hbox;
     GtkWidget *name_label;
@@ -1871,12 +1879,17 @@ create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
     GtkWidget *edit_close;
     GtkWidget *top_level_widget = NULL;
 
-    /* create combo models */
-    create_edit_combo_models();
+    // When running as a DSSI plugin, the callback_data variable and combo models
+    // are initialized in create_windows() and create_main_window(). Since the LV2
+    //  interface only creates the edit window, we need to perform this initialization
+    // here.
+    if (plugin_mode == Y_LV2)
+    {
+        initialize_callback_data_and_voice_widgets(callback_data);
+        create_edit_combo_models();
+    }
 
-    struct voice_widgets* voice_widgets = malloc(sizeof(struct voice_widgets) * Y_PORTS_COUNT);
-
-    initialize_callback_data(callback_data, voice_widgets);
+    struct voice_widgets* voice_widgets = callback_data[0].voice_widgets;
 
     if (plugin_mode == Y_DSSI)
     {
@@ -1964,15 +1977,6 @@ create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
     else if (plugin_mode == Y_LV2)
     {
         top_level_widget = notebook;
-    }
-
-    for (port = 0; port < Y_PORTS_COUNT; port++) {
-        voice_widgets[port].widget = NULL;
-        voice_widgets[port].adjustment = NULL;
-        voice_widgets[port].top_label = NULL;
-        voice_widgets[port].label1 = NULL;
-        voice_widgets[port].label2 = NULL;
-        voice_widgets[port].last_mode = -1;
     }
 
     /* oscillator 1 */
@@ -2357,7 +2361,7 @@ create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
                                     callback_data);
     create_edit_place_knob_in_table(Y_PORT_VLFO_DELAY, NULL, NULL, NULL,        top_level_widget, lfo_table, 5, 6, 2, 3,
                                     callback_data);
-                                                                   
+
     create_edit_place_knob_in_table(Y_PORT_MLFO_FREQUENCY, NULL, NULL, NULL,    top_level_widget, lfo_table, 1, 2, 3, 4,
                                     callback_data);
     create_edit_place_combo_in_table(Y_PORT_MLFO_WAVEFORM, NULL, Y_COMBOMODEL_TYPE_WAVETABLE,
@@ -2709,7 +2713,7 @@ create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (test_note_key_label), 0, 0.5);
-  
+
     test_note_velocity_label = gtk_label_new ("velocity");
     gtk_widget_ref (test_note_velocity_label);
     gtk_object_set_data_full (GTK_OBJECT (top_level_widget), "edit test_note_velocity_label", test_note_velocity_label,
@@ -2839,7 +2843,7 @@ create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
     // when running as a LV2 plugin, the edit window is the top level window,
     // so we need to add the configuration tab here instead of the main window
     if (plugin_mode == Y_LV2)
-        create_configuration_tab(notebook);
+        create_configuration_tab(notebook, callback_data);
 }
 
 void
@@ -2978,6 +2982,7 @@ create_windows(const char *instance_tag, struct y_ui_callback_data_t* callback_d
         }
     }
 
+    initialize_callback_data_and_voice_widgets(callback_data);
     create_main_window(tag, callback_data);
     create_about_window(tag);
     create_open_file_chooser(tag);
@@ -2987,4 +2992,3 @@ create_windows(const char *instance_tag, struct y_ui_callback_data_t* callback_d
     create_edit_save_position_window(tag, callback_data);
     create_notice_window(tag);
 }
-

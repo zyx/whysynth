@@ -207,6 +207,9 @@ struct _y_synth_t {
     LADSPA_Data    *modmix_mod2_src;
     LADSPA_Data    *modmix_mod2_amt;
     LADSPA_Data    *tuning;
+    LADSPA_Data    *ladspa_polyphony;
+    LADSPA_Data    *monophonic_mode;
+    LADSPA_Data    *glide_mode;
 
 #if LV2_ENABLED
     /* LV2 ports */
@@ -291,7 +294,9 @@ int   y_synth_set_program_descriptor(y_synth_t *synth,
                                      DSSI_Program_Descriptor *pd,
                                      unsigned long patch);
 char *y_synth_handle_load(y_synth_t *synth, const char *value);
+void y_synth_set_polyphony(y_synth_t *synth, int polyphony);
 char *y_synth_handle_polyphony(y_synth_t *synth, const char *value);
+void y_synth_set_monophonic_mode(y_synth_t *synth, int mode);
 char *y_synth_handle_monophonic(y_synth_t *synth, const char *value);
 char *y_synth_handle_glide(y_synth_t *synth, const char *value);
 char *y_synth_handle_program_cancel(y_synth_t *synth, const char *value);

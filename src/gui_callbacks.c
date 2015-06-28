@@ -48,6 +48,7 @@
 #include "gui_interface.h"
 #include "common_data.h"
 #include "wave_tables.h"
+#include "dssp_event.h"
 
 static unsigned char test_note_noteon_key = 60;
 static int           test_note_noteoff_key = -1;
@@ -231,7 +232,7 @@ on_open_file_chooser_response(GtkDialog *dialog, gint response, gpointer data)
                 } else {
                     display_notice("Open Patch File error:", "couldn't save temporary patch bank");
                 }
-            
+
             } else {
 
                 /* patches is clean after the load, so tell the plugin to
@@ -335,7 +336,7 @@ on_save_file_chooser_response(GtkDialog *dialog, gint response, gpointer data)
                 display_notice("Save Patch File succeeded:", message);
 
                 if (save_file_start == 0 && save_file_end + 1 == patch_count) {
-            
+
                     patches_dirty = 0;
                     lo_send(osc_host_address, osc_configure_path, "ss", "load",
                             filename);
@@ -482,7 +483,7 @@ on_voice_knob_change( GtkWidget *widget, gpointer data )
     float value;
 
     value = get_value_from_knob(callback_data->index, callback_data->voice_widgets);
-    
+
     GDB_MESSAGE(GDB_GUI, " on_voice_knob_change: knob %d changed to %10.6f => %10.6f\n",
             index, GTK_ADJUSTMENT(widget)->value, value);
 
@@ -818,7 +819,7 @@ on_test_note_slider_change(GtkWidget *widget, gpointer data)
         test_note_noteon_key = value;
 
         GTK_ADJUSTMENT(edit_test_note_key_adj)->value = test_note_noteon_key;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * this callback again */
         g_signal_handlers_block_by_func(G_OBJECT(edit_test_note_key_adj),
                                         on_test_note_slider_change, (gpointer)2);
@@ -834,7 +835,7 @@ on_test_note_slider_change(GtkWidget *widget, gpointer data)
         test_note_velocity = value;
 
         GTK_ADJUSTMENT(edit_test_note_velocity_adj)->value = test_note_velocity;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * this callback again */
         g_signal_handlers_block_by_func(G_OBJECT(edit_test_note_velocity_adj),
                                         on_test_note_slider_change, (gpointer)3);
@@ -850,7 +851,7 @@ on_test_note_slider_change(GtkWidget *widget, gpointer data)
         test_note_noteon_key = value;
 
         GTK_ADJUSTMENT(main_test_note_key_adj)->value = test_note_noteon_key;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * this callback again */
         g_signal_handlers_block_by_func(G_OBJECT(main_test_note_key_adj),
                                         on_test_note_slider_change, (gpointer)0);
@@ -866,7 +867,7 @@ on_test_note_slider_change(GtkWidget *widget, gpointer data)
         test_note_velocity = value;
 
         GTK_ADJUSTMENT(main_test_note_velocity_adj)->value = test_note_velocity;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * this callback again */
         g_signal_handlers_block_by_func(G_OBJECT(main_test_note_velocity_adj),
                                         on_test_note_slider_change, (gpointer)1);
@@ -962,7 +963,7 @@ on_edit_action_button_press(GtkWidget *widget, gpointer data)
         (GTK_ADJUSTMENT(edit_save_position_spin_adj))->value = (float)i;
         (GTK_ADJUSTMENT(edit_save_position_spin_adj))->upper = (float)patch_count;
         gtk_signal_emit_by_name (GTK_OBJECT (edit_save_position_spin_adj), "value_changed");
-    
+
         gtk_widget_show(edit_save_position_window);
 
     }
@@ -1013,43 +1014,136 @@ on_edit_close(GtkWidget *widget, gpointer data)
 void
 on_tuning_change(GtkWidget *widget, gpointer data)
 {
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
     float value = GTK_ADJUSTMENT(widget)->value;
 
     GDB_MESSAGE(GDB_GUI, " on_tuning_change: tuning set to %10.6f\n", value);
 
-    lo_send(osc_host_address, osc_control_path, "if", Y_PORT_TUNING, value);
+    if (plugin_mode == Y_DSSI)
+        lo_send(osc_host_address, osc_control_path, "if", Y_PORT_TUNING, value);
+#if LV2_ENABLED
+    else if (plugin_mode == Y_LV2)
+        callback_data->lv2_write_function(callback_data->lv2_controller, Y_PORT_TUNING, sizeof(float), 0, &value);
+#endif
+
 }
 
 void
 on_polyphony_change(GtkWidget *widget, gpointer data)
 {
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
     int polyphony = lrintf(GTK_ADJUSTMENT(widget)->value);
+    float floatPolyphony = (float)polyphony;
     char buffer[4];
-    
+
     GDB_MESSAGE(GDB_GUI, " on_polyphony_change: polyphony set to %d\n", polyphony);
 
     snprintf(buffer, 4, "%d", polyphony);
-    lo_send(osc_host_address, osc_configure_path, "ss", "polyphony", buffer);
+    if (plugin_mode == Y_DSSI)
+        lo_send(osc_host_address, osc_configure_path, "ss", "polyphony", buffer);
+#if LV2_ENABLED
+    else if (plugin_mode == Y_LV2)
+        callback_data->lv2_write_function(callback_data->lv2_controller, Y_PORT_POLYPHONY, sizeof(float), 0, &floatPolyphony);
+#endif
+}
+
+int
+combo_get_value(int port, struct voice_widgets* voice_widgets)
+{
+    GtkComboBox *combo = GTK_COMBO_BOX(voice_widgets[port].widget);
+
+    return (int)g_object_get_qdata(G_OBJECT(combo), combo_value_quark);
 }
 
 void
 on_mono_mode_activate(GtkWidget *widget, gpointer data)
 {
-    char *mode = data;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
+    GtkComboBox *combo = GTK_COMBO_BOX(callback_data->voice_widgets[Y_PORT_MONOPHONIC_MODE].widget);
+
+    GtkTreeIter iter;
+    GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(widget));
+    int mode = 0;  /* default to 0 if no row is active */
+
+    if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(widget), &iter))
+        gtk_tree_model_get(model, &iter, 1, &mode, -1);
 
     GDB_MESSAGE(GDB_GUI, " on_mono_mode_activate: monophonic mode '%s' selected\n", mode);
 
-    lo_send(osc_host_address, osc_configure_path, "ss", "monophonic", mode);
+    if (plugin_mode == Y_DSSI)
+    {
+        char* string_to_send;
+
+        switch (mode) {
+            case Y_MONO_MODE_OFF:
+                string_to_send = "off";
+                break;
+            case Y_MONO_MODE_ON:
+                string_to_send = "on";
+                break;
+            case Y_MONO_MODE_ONCE:
+                string_to_send = "once";
+                break;
+            case Y_MONO_MODE_BOTH:
+                string_to_send = "both";
+                break;
+        }
+        lo_send(osc_host_address, osc_configure_path, "ss", "monophonic", string_to_send);
+    }
+#if LV2_ENABLED
+    else if (plugin_mode == Y_LV2)
+    {
+        float value = mode;
+        callback_data->lv2_write_function(callback_data->lv2_controller, Y_PORT_MONOPHONIC_MODE, sizeof(float), 0, &value);
+    }
+#endif
 }
 
 void
 on_glide_mode_activate(GtkWidget *widget, gpointer data)
 {
-    char *mode = data;
+    struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
+    GtkComboBox *combo = GTK_COMBO_BOX(callback_data->voice_widgets[Y_PORT_GLIDE_MODE].widget);
+
+    GtkTreeIter iter;
+    GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(widget));
+    int mode = 0;  /* default to 0 if no row is active */
+
+    if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(widget), &iter))
+        gtk_tree_model_get(model, &iter, 1, &mode, -1);
 
     GDB_MESSAGE(GDB_GUI, " on_glide_mode_activate: glide mode '%s' selected\n", mode);
 
-    lo_send(osc_host_address, osc_configure_path, "ss", "glide", mode);
+    if (plugin_mode == Y_DSSI)
+    {
+        char* string_to_send;
+
+        switch (mode) {
+            case Y_GLIDE_MODE_LEGATO:
+                string_to_send = "legato";
+                break;
+            case Y_GLIDE_MODE_INITIAL:
+                string_to_send = "initial";
+                break;
+            case Y_GLIDE_MODE_ALWAYS:
+                string_to_send = "always";
+                break;
+            case Y_GLIDE_MODE_LEFTOVER:
+                string_to_send = "leftover";
+                break;
+            case Y_GLIDE_MODE_OFF:
+                string_to_send = "off";
+                break;
+        }
+        lo_send(osc_host_address, osc_configure_path, "ss", "glide", string_to_send);
+    }
+#if LV2_ENABLED
+    else if (plugin_mode == Y_LV2)
+    {
+        float value = mode;
+        callback_data->lv2_write_function(callback_data->lv2_controller, Y_PORT_GLIDE_MODE, sizeof(float), 0, &value);
+    }
+#endif
 }
 
 void
@@ -1074,14 +1168,6 @@ void
 on_notice_dismiss( GtkWidget *widget, gpointer data )
 {
     gtk_widget_hide(notice_window);
-}
-
-int
-combo_get_value(int port, struct voice_widgets* voice_widgets)
-{
-    GtkComboBox *combo = GTK_COMBO_BOX(voice_widgets[port].widget);
-
-    return (int)g_object_get_qdata(G_OBJECT(combo), combo_value_quark);
 }
 
 void
@@ -1477,7 +1563,7 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
 
     if (port == Y_PORT_TUNING) {  /* handle tuning specially, since it's not stored in patch */
         (GTK_ADJUSTMENT(tuning_adj))->value = value;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_tuning_change(): */
         g_signal_handlers_block_by_func(tuning_adj, on_tuning_change, NULL);
         gtk_signal_emit_by_name (tuning_adj, "value_changed");
@@ -1505,7 +1591,7 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %d\n", ypd->name, value, dval);
         adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = (float)dval;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_voice_detent_change(): */
         g_signal_handlers_block_by_func(adj, on_voice_detent_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
@@ -1517,7 +1603,7 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f\n", ypd->name, value);
         adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = value;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_voice_knob_change(): */
         g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
@@ -1534,7 +1620,7 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %f\n", ypd->name, value, cval);
         adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = cval;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_voice_knob_change(): */
         g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
@@ -1551,7 +1637,7 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %f\n", ypd->name, value, cval);
         adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = cval;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_voice_knob_change(): */
         g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
@@ -1576,7 +1662,7 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %f\n", ypd->name, value, cval);
         adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
         adj->value = cval;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_voice_knob_change(): */
         g_signal_handlers_block_by_func(adj, on_voice_knob_change, &callback_data[port]);
         gtk_signal_emit_by_name (GTK_OBJECT (adj), "value_changed");
@@ -1586,7 +1672,6 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
       case Y_PORT_TYPE_COMBO:
         dval = lrintf(value);
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of combo '%s' to %f => %d\n", ypd->name, value, dval);
-        widget = callback_data->voice_widgets[port].widget;
         combo_set_value(port, dval, callback_data);  /* does not cause call to on_voice_combo_change() */
         check_for_layout_update_on_port_change(port, callback_data);
         break;
@@ -1746,7 +1831,7 @@ update_voice_widgets_from_patch(y_patch_t *patch, struct y_ui_callback_data_t* c
     update_voice_widget(Y_PORT_EGO_KBD_TIME_SCALE, patch->ego.kbd_time_scale,        FALSE, callback_data);
     update_voice_widget(Y_PORT_EGO_AMP_MOD_SRC,    (float)patch->ego.amp_mod_src,    FALSE, callback_data);
     update_voice_widget(Y_PORT_EGO_AMP_MOD_AMT,    patch->ego.amp_mod_amt,           FALSE, callback_data);
-                                                                                        
+
     update_voice_widget(Y_PORT_EG1_MODE,           (float)patch->eg1.mode,           FALSE, callback_data);
     update_voice_widget(Y_PORT_EG1_SHAPE1,         (float)patch->eg1.shape1,         FALSE, callback_data);
     update_voice_widget(Y_PORT_EG1_TIME1,          patch->eg1.time1,                 FALSE, callback_data);
@@ -1764,7 +1849,7 @@ update_voice_widgets_from_patch(y_patch_t *patch, struct y_ui_callback_data_t* c
     update_voice_widget(Y_PORT_EG1_KBD_TIME_SCALE, patch->eg1.kbd_time_scale,        FALSE, callback_data);
     update_voice_widget(Y_PORT_EG1_AMP_MOD_SRC,    (float)patch->eg1.amp_mod_src,    FALSE, callback_data);
     update_voice_widget(Y_PORT_EG1_AMP_MOD_AMT,    patch->eg1.amp_mod_amt,           FALSE, callback_data);
-                                                                                        
+
     update_voice_widget(Y_PORT_EG2_MODE,           (float)patch->eg2.mode,           FALSE, callback_data);
     update_voice_widget(Y_PORT_EG2_SHAPE1,         (float)patch->eg2.shape1,         FALSE, callback_data);
     update_voice_widget(Y_PORT_EG2_TIME1,          patch->eg2.time1,                 FALSE, callback_data);
@@ -1782,7 +1867,7 @@ update_voice_widgets_from_patch(y_patch_t *patch, struct y_ui_callback_data_t* c
     update_voice_widget(Y_PORT_EG2_KBD_TIME_SCALE, patch->eg2.kbd_time_scale,        FALSE, callback_data);
     update_voice_widget(Y_PORT_EG2_AMP_MOD_SRC,    (float)patch->eg2.amp_mod_src,    FALSE, callback_data);
     update_voice_widget(Y_PORT_EG2_AMP_MOD_AMT,    patch->eg2.amp_mod_amt,           FALSE, callback_data);
-                                                                                        
+
     update_voice_widget(Y_PORT_EG3_MODE,           (float)patch->eg3.mode,           FALSE, callback_data);
     update_voice_widget(Y_PORT_EG3_SHAPE1,         (float)patch->eg3.shape1,         FALSE, callback_data);
     update_voice_widget(Y_PORT_EG3_TIME1,          patch->eg3.time1,                 FALSE, callback_data);
@@ -1800,7 +1885,7 @@ update_voice_widgets_from_patch(y_patch_t *patch, struct y_ui_callback_data_t* c
     update_voice_widget(Y_PORT_EG3_KBD_TIME_SCALE, patch->eg3.kbd_time_scale,        FALSE, callback_data);
     update_voice_widget(Y_PORT_EG3_AMP_MOD_SRC,    (float)patch->eg3.amp_mod_src,    FALSE, callback_data);
     update_voice_widget(Y_PORT_EG3_AMP_MOD_AMT,    patch->eg3.amp_mod_amt,           FALSE, callback_data);
-                                                                                        
+
     update_voice_widget(Y_PORT_EG4_MODE,           (float)patch->eg4.mode,           FALSE, callback_data);
     update_voice_widget(Y_PORT_EG4_SHAPE1,         (float)patch->eg4.shape1,         FALSE, callback_data);
     update_voice_widget(Y_PORT_EG4_TIME1,          patch->eg4.time1,                 FALSE, callback_data);
@@ -2193,7 +2278,7 @@ update_polyphony(const char *value)
     if (poly > 0 && poly < Y_MAX_POLYPHONY) {
 
         GTK_ADJUSTMENT(polyphony_adj)->value = (float)poly;
-        /* emit "value_changed" to get the widget to redraw itself, but don't call 
+        /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_polyphony_change(): */
         g_signal_handlers_block_by_func(polyphony_adj, on_polyphony_change, NULL);
         gtk_signal_emit_by_name (GTK_OBJECT (polyphony_adj), "value_changed");
@@ -2329,4 +2414,3 @@ update_port_wavetable_counts(void)
             y_port_description[port].upper_bound = (float)wavetables_count - 1;
     }
 }
-

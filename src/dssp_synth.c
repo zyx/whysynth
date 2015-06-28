@@ -456,6 +456,9 @@ y_connect_port(LADSPA_Handle instance, unsigned long port, LADSPA_Data *data)
       case Y_PORT_MODMIX_MOD2_AMT:    synth->modmix_mod2_amt    = data;  break;
 
       case Y_PORT_TUNING:             synth->tuning             = data;  break;
+      case Y_PORT_POLYPHONY:          synth->ladspa_polyphony   = data;  break;
+      case Y_PORT_MONOPHONIC_MODE:    synth->monophonic_mode    = data;  break;
+      case Y_PORT_GLIDE_MODE:         synth->glide_mode         = data;  break;
 
       default:
         break;
@@ -807,6 +810,14 @@ y_run_synth(LADSPA_Handle instance, unsigned long sample_count,
         }
 #if LV2_ENABLED
         else if (global.plugin_mode == Y_LV2) {
+
+            /* process polyphony, mono mode and glide mode LV2 port values*/
+            if (synth->polyphony != (int)*synth->ladspa_polyphony)
+                y_synth_set_polyphony(synth, (int)*synth->ladspa_polyphony);
+            if (synth->monophonic != (int)*synth->monophonic_mode)
+                y_synth_set_monophonic_mode(synth, (int)*synth->monophonic_mode);
+            synth->glide = (int)*(synth->glide_mode);
+
             /* process any ready LV2 events */
             while (! lv2_atom_sequence_is_end(&synth->control_port->body, synth->control_port->atom.size, event)
                    && event->time.frames == samples_done) {
@@ -1105,4 +1116,3 @@ void _fini()
     }
 #endif
 }
-

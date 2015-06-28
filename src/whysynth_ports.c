@@ -288,7 +288,13 @@ struct y_port_descriptor y_port_description[Y_PORTS_COUNT] = {
 
     // debug: { PD_IN,  "XXXXXXX",             HD_440,        415.3f,   466.2f,   YPT_LIN,   415.3,466.2,0. },
 
-    { PD_IN,  "Tuning",              HD_440,        415.3f,   466.2f,   YPT_LIN,   0. }
+    { PD_IN,  "Tuning",              HD_440,        415.3f,   466.2f,   YPT_LIN,   0. },
+
+    // LV2 only ports
+    { PD_IN,  "Polyphony",           HD_DETENT,       1.0f,    64.0f,   YPT_INT,   0. },
+    { PD_IN,  "Monophonic Mode",     HD_DETENT,       0.0f,     3.0f,   YPT_COMBO, 0. },
+    { PD_IN,  "Glide Mode",          HD_DETENT,       0.0f,     4.0f,   YPT_COMBO, 0. }
+
 #undef PD_OUT
 #undef PD_IN
 #undef HD_MIN

@@ -35,7 +35,7 @@
 #include <gtk/gtk.h>
 #include <lo/lo.h>
 #include <dssi.h>
- 
+
 #if LV2_ENABLED
 #   include "lv2/lv2plug.in/ns/ext/atom/atom.h"
 #   include "lv2/lv2plug.in/ns/ext/atom/forge.h"
@@ -349,7 +349,7 @@ main(int argc, char *argv[])
     fprintf(stderr, "WhySynth_gtk starting (pid %d)...\n", getpid());
 #endif
     /* { int i; fprintf(stderr, "args:\n"); for(i=0; i<argc; i++) printf("%d: %s\n", i, argv[i]); } // debug */
-    
+
     gtk_init(&argc, &argv);
 
     if (argc > 1 && !strcmp(argv[1], "-test")) {
@@ -518,7 +518,7 @@ port_event(LV2UI_Handle handle,
     if (format != 0)
         return;
 
-    // The tuning control isn't part of the controls inside the 
+    // The tuning control isn't part of the controls inside the
     // notebook, so trying to update it when running in LV2
     // mode with only the notebook available will just segfault.
     if (port_index == Y_PORT_TUNING)

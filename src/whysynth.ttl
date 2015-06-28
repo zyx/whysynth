@@ -1675,11 +1675,38 @@
         lv2:default 440.0 ;
     ] , [
         a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 198 ;
+        lv2:symbol "polyphony" ;
+        lv2:name "Polyphony" ;
+        lv2:minimum 0 ;
+        lv2:maximum 64 ;
+        lv2:default 12 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 199 ;
+        lv2:symbol "monophonic_mode" ;
+        lv2:name "Monophonic Mode" ;
+        lv2:minimum 0 ;
+        lv2:maximum 3 ;
+        lv2:default 0 ;
+    ] , [
+        a lv2:InputPort ,
+          lv2:ControlPort ;
+        lv2:index 200 ;
+        lv2:symbol "glide_mode" ;
+        lv2:name "Glide Mode" ;
+        lv2:minimum 0 ;
+        lv2:maximum 4 ;
+        lv2:default 4 ;
+    ] , [
+        a lv2:InputPort ,
           atom:AtomPort ;
         atom:bufferType atom:Sequence ;
         atom:supports <http://lv2plug.in/ns/ext/midi#MidiEvent> ;
         lv2:designation lv2:control ;
-        lv2:index 198 ;
+        lv2:index 201 ;
         lv2:symbol "control" ;
         lv2:name "Control"
     ] .

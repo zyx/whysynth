@@ -570,6 +570,26 @@ y_synth_handle_load(y_synth_t *synth, const char *value)
 }
 
 /*
+ * y_synth_set_monophonic_mode
+ */
+void
+y_synth_set_monophonic_mode(y_synth_t *synth, int mode)
+{
+    if (mode == Y_MONO_MODE_OFF) {  /* polyphonic mode */
+
+        synth->monophonic = 0;
+        synth->voices = synth->polyphony;
+
+    } else {  /* one of the monophonic modes */
+
+        if (!synth->monophonic) y_synth_all_voices_off(synth);
+        synth->monophonic = mode;
+        synth->voices = 1;
+
+    }
+}
+
+/*
  * y_synth_handle_monophonic
  */
 char *
@@ -586,23 +606,38 @@ y_synth_handle_monophonic(y_synth_t *synth, const char *value)
         return dssi_configure_message("error: monophonic value not recognized");
     }
 
-    if (mode == Y_MONO_MODE_OFF) {  /* polyphonic mode */
-
-        synth->monophonic = 0;
-        synth->voices = synth->polyphony;
-
-    } else {  /* one of the monophonic modes */
-
-        dssp_voicelist_mutex_lock(synth);
-
-        if (!synth->monophonic) y_synth_all_voices_off(synth);
-        synth->monophonic = mode;
-        synth->voices = 1;
-
-        dssp_voicelist_mutex_unlock(synth);
-    }
+    dssp_voicelist_mutex_lock(synth);
+    y_synth_set_monophonic_mode(synth, mode);
+    dssp_voicelist_mutex_unlock(synth);
 
     return NULL;
+}
+
+/*
+ * y_synth_set_polyphony
+ */
+void
+y_synth_set_polyphony(y_synth_t *synth, int polyphony)
+{
+    int i;
+    y_voice_t *voice;
+
+    /* set the new limit */
+    synth->polyphony = polyphony;
+
+    if (!synth->monophonic) {
+        synth->voices = polyphony;
+
+        /* turn off any voices above the new limit */
+        for (i = polyphony; i < Y_MAX_POLYPHONY; i++) {
+            voice = synth->voice[i];
+            if (_PLAYING(voice)) {
+                if (synth->held_keys[0] != -1)
+                    y_synth_clear_held_keys(synth);
+                y_voice_off(synth, voice);
+            }
+        }
+    }
 }
 
 /*
@@ -612,33 +647,14 @@ char *
 y_synth_handle_polyphony(y_synth_t *synth, const char *value)
 {
     int polyphony = atoi(value);
-    int i;
-    y_voice_t *voice;
 
     if (polyphony < 1 || polyphony > Y_MAX_POLYPHONY) {
         return dssi_configure_message("error: polyphony value out of range");
     }
-    /* set the new limit */
-    synth->polyphony = polyphony;
 
-    if (!synth->monophonic) {
-        synth->voices = polyphony;
-
-        /* turn off any voices above the new limit */
-
-        dssp_voicelist_mutex_lock(synth);
-
-        for (i = polyphony; i < Y_MAX_POLYPHONY; i++) {
-            voice = synth->voice[i];
-            if (_PLAYING(voice)) {
-                if (synth->held_keys[0] != -1)
-                    y_synth_clear_held_keys(synth);
-                y_voice_off(synth, voice);
-            }
-        }
-
-        dssp_voicelist_mutex_unlock(synth);
-    }
+    dssp_voicelist_mutex_lock(synth);
+    y_synth_set_polyphony(synth, polyphony);
+    dssp_voicelist_mutex_unlock(synth);
 
     return NULL;
 }

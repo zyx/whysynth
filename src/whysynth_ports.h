@@ -248,7 +248,12 @@
 
 #define Y_PORT_TUNING             197
 
-#define Y_PORTS_COUNT  198
+// LV2 only ports
+#define Y_PORT_POLYPHONY          198
+#define Y_PORT_MONOPHONIC_MODE    199
+#define Y_PORT_GLIDE_MODE         200
+
+#define Y_PORTS_COUNT  201
 
 #define Y_PORT_TYPE_OUTPUT       0  /* control output */
 #define Y_PORT_TYPE_BOOLEAN      1
@@ -260,17 +265,20 @@
 #define Y_PORT_TYPE_COMBO        7  /* integer using combobox */
 #define Y_PORT_TYPE_PAN          8  /* linear, but with button to center */
 
-#define Y_COMBO_TYPE_OSC_MODE      0
-#define Y_COMBO_TYPE_OSC_WAVEFORM  1
-#define Y_COMBO_TYPE_WT_WAVEFORM   2
-#define Y_COMBO_TYPE_MOD_SRC       3
-#define Y_COMBO_TYPE_MMOD_SRC      4
-#define Y_COMBO_TYPE_FILTER_MODE   5
-#define Y_COMBO_TYPE_FILTER_SRC    6
-#define Y_COMBO_TYPE_EFFECT_MODE   7
-#define Y_COMBO_TYPE_EG_MODE       8
-#define Y_COMBO_TYPE_EG_SHAPE      9
-#define Y_COMBO_TYPE_COUNT  10
+#define Y_COMBO_TYPE_OSC_MODE          0
+#define Y_COMBO_TYPE_OSC_WAVEFORM      1
+#define Y_COMBO_TYPE_WT_WAVEFORM       2
+#define Y_COMBO_TYPE_MOD_SRC           3
+#define Y_COMBO_TYPE_MMOD_SRC          4
+#define Y_COMBO_TYPE_FILTER_MODE       5
+#define Y_COMBO_TYPE_FILTER_SRC        6
+#define Y_COMBO_TYPE_EFFECT_MODE       7
+#define Y_COMBO_TYPE_EG_MODE           8
+#define Y_COMBO_TYPE_EG_SHAPE          9
+#define Y_COMBO_TYPE_MONOPHONIC_MODE   10
+#define Y_COMBO_TYPE_GLIDE_MODE        11
+
+#define Y_COMBO_TYPE_COUNT  12
 
 #define Y_COMBOMODEL_TYPE_OSC_MODE          0
 #define Y_COMBOMODEL_TYPE_WAVETABLE         1
@@ -287,7 +295,9 @@
 #define Y_COMBOMODEL_TYPE_EG_MODE          12
 #define Y_COMBOMODEL_TYPE_EG_SHAPE         13
 #define Y_COMBOMODEL_TYPE_PD_WAVEFORM      14
-#define Y_COMBOMODEL_TYPE_COUNT   15
+#define Y_COMBOMODEL_TYPE_MONOPHONIC_MODE  15
+#define Y_COMBOMODEL_TYPE_GLIDE_MODE       16
+#define Y_COMBOMODEL_TYPE_COUNT   17
 
 /* -FIX- enumerate them all: */
 #define Y_OSCILLATOR_MODE_MINBLEP   1
@@ -334,7 +344,7 @@
 #define Y_MODS_COUNT    23
 
 /* the port index for the LV2 Control (MIDI) port */
-#define Y_LV2_CONTROL_PORT 198
+#define Y_LV2_CONTROL_PORT 201
 
 struct y_port_descriptor {
 
@@ -352,4 +362,3 @@ struct y_port_descriptor {
 extern struct y_port_descriptor y_port_description[];
 
 #endif /* _WHYSYNTH_PORTS_H */
-
