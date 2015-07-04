@@ -190,7 +190,7 @@ y_instantiate(const LADSPA_Descriptor *descriptor, unsigned long sample_rate)
     synth->polyphony = Y_DEFAULT_POLYPHONY;
     synth->voices = Y_DEFAULT_POLYPHONY;
     synth->monophonic = 0;
-    synth->glide = 0;
+    synth->glide = 4;
     synth->last_noteon_pitch = 0.0f;
     pthread_mutex_init(&synth->voicelist_mutex, NULL);
     synth->voicelist_mutex_grab_failed = 0;
@@ -1025,7 +1025,7 @@ void _init()
 #endif
         y_LADSPA_descriptor->Maker = "Sean Bolton <musound AT jps DOT net>";
         y_LADSPA_descriptor->Copyright = "GNU General Public License version 2 or later";
-        y_LADSPA_descriptor->PortCount = Y_PORTS_COUNT;
+        y_LADSPA_descriptor->PortCount = Y_DSSI_PORTS_COUNT;
 
         port_descriptors = (LADSPA_PortDescriptor *)
                                 calloc(y_LADSPA_descriptor->PortCount, sizeof
@@ -1042,7 +1042,7 @@ void _init()
         port_names = (char **) calloc(y_LADSPA_descriptor->PortCount, sizeof(char *));
         y_LADSPA_descriptor->PortNames = (const char **) port_names;
 
-        for (i = 0; i < Y_PORTS_COUNT; i++) {
+        for (i = 0; i < Y_DSSI_PORTS_COUNT; i++) {
             port_descriptors[i] = y_port_description[i].port_descriptor;
             port_names[i]       = y_port_description[i].name;
             port_range_hints[i].HintDescriptor = y_port_description[i].hint_descriptor;

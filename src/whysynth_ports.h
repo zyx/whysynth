@@ -248,6 +248,11 @@
 
 #define Y_PORT_TUNING             197
 
+// when running as a DSSI plugin, we don't expose
+// the LV2 only ports, so we use this value instead
+// in the initialization function in dssp_synth.c
+#define Y_DSSI_PORTS_COUNT  198
+
 // LV2 only ports
 #define Y_PORT_POLYPHONY          198
 #define Y_PORT_MONOPHONIC_MODE    199

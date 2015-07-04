@@ -208,13 +208,22 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (label44), 0, 0.5);
 
-    monophonic_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(combomodel[Y_COMBOMODEL_TYPE_MONOPHONIC_MODE]));
+
+    GtkTreeStore *monophonic_option_menu_model = combomodel[Y_COMBOMODEL_TYPE_MONOPHONIC_MODE];
+    monophonic_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(monophonic_option_menu_model));
     gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer, FALSE);
     gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer,
                                        cmodel_only_leaves_sensitive, NULL, NULL);
     gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer, "text", 0);
     g_object_set_qdata(G_OBJECT(monophonic_option_menu), combo_value_quark, (gpointer)0);
     g_object_set_qdata(G_OBJECT(monophonic_option_menu), combo_combomodel_type_quark, (gpointer)Y_COMBOMODEL_TYPE_MONOPHONIC_MODE);
+
+    // set the active row to the 'Off' option
+    GPtrArray *id_to_path = g_object_get_qdata(G_OBJECT(monophonic_option_menu_model), combomodel_id_to_path_quark);
+    GtkTreeIter iter;
+    gtk_tree_model_get_iter_from_string(monophonic_option_menu_model, &iter, g_ptr_array_index(id_to_path, Y_MONO_MODE_OFF));
+    gtk_combo_box_set_active_iter(monophonic_option_menu, &iter);
+
     gtk_widget_show (monophonic_option_menu);
     voice_widgets[Y_PORT_MONOPHONIC_MODE].widget = monophonic_option_menu;
     if (plugin_mode == Y_DSSI) {
@@ -239,13 +248,20 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
                       (GtkAttachOptions) (0), 0, 0);
     gtk_misc_set_alignment (GTK_MISC (glide_mode_label), 0, 0.5);
 
-    glide_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(combomodel[Y_COMBOMODEL_TYPE_GLIDE_MODE]));
+    GtkTreeStore *glide_option_menu_model = combomodel[Y_COMBOMODEL_TYPE_GLIDE_MODE];
+    glide_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(glide_option_menu_model));
     gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer, FALSE);
     gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer,
                                        cmodel_only_leaves_sensitive, NULL, NULL);
     gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer, "text", 0);
     g_object_set_qdata(G_OBJECT(glide_option_menu), combo_value_quark, (gpointer)0);
     g_object_set_qdata(G_OBJECT(glide_option_menu), combo_combomodel_type_quark, (gpointer)Y_COMBOMODEL_TYPE_GLIDE_MODE);
+
+    // set the active row to the 'Off' option
+    id_to_path = g_object_get_qdata(G_OBJECT(glide_option_menu_model), combomodel_id_to_path_quark);
+    gtk_tree_model_get_iter_from_string(glide_option_menu_model, &iter, g_ptr_array_index(id_to_path, Y_GLIDE_MODE_OFF));
+    gtk_combo_box_set_active_iter(glide_option_menu, &iter);
+
     gtk_widget_show (glide_option_menu);
     voice_widgets[Y_PORT_GLIDE_MODE].widget = glide_option_menu;
     if (plugin_mode == Y_DSSI) {
