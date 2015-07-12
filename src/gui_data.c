@@ -536,17 +536,17 @@ lv2_write_text(FILE *file, char *text, int maxlen)
 void
 lv2_write_osc(FILE *file, struct posc *osc, int osc_number)
 {
-    fprintf(file, "[ lv2:symbol \"osc%d_mode\"          ; pset:value %d ],\n",    osc_number, osc->mode);
-    fprintf(file, "[ lv2:symbol \"osc%d_waveform\"      ; pset:value %d ],\n",    osc_number, osc->waveform);
-    fprintf(file, "[ lv2:symbol \"osc%d_pitch\"         ; pset:value %d ],\n",    osc_number, osc->pitch);
+    fprintf(file, "[ lv2:symbol \"osc%d_mode\"          ; pset:value %d.0 ],\n",  osc_number, osc->mode);
+    fprintf(file, "[ lv2:symbol \"osc%d_waveform\"      ; pset:value %d.0 ],\n",  osc_number, osc->waveform);
+    fprintf(file, "[ lv2:symbol \"osc%d_pitch\"         ; pset:value %d.0 ],\n",  osc_number, osc->pitch);
     fprintf(file, "[ lv2:symbol \"osc%d_detune\"        ; pset:value %.6g ],\n",  osc_number, osc->detune);
-    fprintf(file, "[ lv2:symbol \"osc%d_pitch_mod_src\" ; pset:value %d ],\n",    osc_number, osc->pitch_mod_src);
+    fprintf(file, "[ lv2:symbol \"osc%d_pitch_mod_src\" ; pset:value %d.0 ],\n",  osc_number, osc->pitch_mod_src);
     fprintf(file, "[ lv2:symbol \"osc%d_pitch_mod_amt\" ; pset:value %.6g ],\n",  osc_number, osc->pitch_mod_amt);
     fprintf(file, "[ lv2:symbol \"osc%d_mparam_1\"      ; pset:value %.6g ],\n",  osc_number, osc->mparam1);
     fprintf(file, "[ lv2:symbol \"osc%d_mparam_2\"      ; pset:value %.6g ],\n",  osc_number, osc->mparam2);
-    fprintf(file, "[ lv2:symbol \"osc%d_mmod_src\"      ; pset:value %d ],\n",    osc_number, osc->mmod_src);
+    fprintf(file, "[ lv2:symbol \"osc%d_mmod_src\"      ; pset:value %d.0 ],\n",  osc_number, osc->mmod_src);
     fprintf(file, "[ lv2:symbol \"osc%d_mmod_amt\"      ; pset:value %.6g ],\n",  osc_number, osc->mmod_amt);
-    fprintf(file, "[ lv2:symbol \"osc%d_amp_mod_src\"   ; pset:value %d ],\n",    osc_number, osc->amp_mod_src);
+    fprintf(file, "[ lv2:symbol \"osc%d_amp_mod_src\"   ; pset:value %d.0 ],\n",  osc_number, osc->amp_mod_src);
     fprintf(file, "[ lv2:symbol \"osc%d_amp_mod_amt\"   ; pset:value %.6g ],\n",  osc_number, osc->amp_mod_amt);
     fprintf(file, "[ lv2:symbol \"osc%d_busa_level\"    ; pset:value %.6g ],\n",  osc_number, osc->level_a);
     fprintf(file, "[ lv2:symbol \"osc%d_busb_level\"    ; pset:value %.6g ],\n",  osc_number, osc->level_b);
@@ -555,10 +555,10 @@ lv2_write_osc(FILE *file, struct posc *osc, int osc_number)
 void
 lv2_write_vcf(FILE *file, struct pvcf *vcf, int filter_number)
 {
-    fprintf(file, "[ lv2:symbol \"filter%d_mode\"        ; pset:value %d ],\n",    filter_number, vcf->mode);
-    fprintf(file, "[ lv2:symbol \"filter%d_source\"      ; pset:value %d ],\n",    filter_number, vcf->source);
+    fprintf(file, "[ lv2:symbol \"filter%d_mode\"        ; pset:value %d.0 ],\n",  filter_number, vcf->mode);
+    fprintf(file, "[ lv2:symbol \"filter%d_source\"      ; pset:value %d.0 ],\n",  filter_number, vcf->source);
     fprintf(file, "[ lv2:symbol \"filter%d_frequency\"   ; pset:value %.6g ],\n",  filter_number, vcf->frequency);
-    fprintf(file, "[ lv2:symbol \"filter%d_frq_mod_src\" ; pset:value %d ],\n",    filter_number, vcf->freq_mod_src);
+    fprintf(file, "[ lv2:symbol \"filter%d_frq_mod_src\" ; pset:value %d.0 ],\n",  filter_number, vcf->freq_mod_src);
     fprintf(file, "[ lv2:symbol \"filter%d_frq_mod_amt\" ; pset:value %.6g ],\n",  filter_number, vcf->freq_mod_amt);
     fprintf(file, "[ lv2:symbol \"filter%d_resonance\"   ; pset:value %.6g ],\n",  filter_number, vcf->qres);
     fprintf(file, "[ lv2:symbol \"filter%d_mparameter\"  ; pset:value %.6g ],\n",  filter_number, vcf->mparam);
@@ -568,33 +568,33 @@ void
 lv2_write_lfo(FILE *file, struct plfo *lfo, char lfo_prefix)
 {
     fprintf(file, "[ lv2:symbol \"%clfo_frequency\"   ; pset:value %.6g ],\n",  lfo_prefix, lfo->frequency);
-    fprintf(file, "[ lv2:symbol \"%clfo_waveform\"    ; pset:value %d ],\n",    lfo_prefix, lfo->waveform );
+    fprintf(file, "[ lv2:symbol \"%clfo_waveform\"    ; pset:value %d.0 ],\n",  lfo_prefix, lfo->waveform );
     // the global LFO doesn't have a delay parameter
     if (lfo_prefix != 'g')
         fprintf(file, "[ lv2:symbol \"%clfo_delay\"       ; pset:value %.6g ],\n",  lfo_prefix, lfo->delay);
-    fprintf(file, "[ lv2:symbol \"%clfo_amp_mod_src\" ; pset:value %d ],\n",    lfo_prefix, lfo->amp_mod_src);
+    fprintf(file, "[ lv2:symbol \"%clfo_amp_mod_src\" ; pset:value %d.0 ],\n",  lfo_prefix, lfo->amp_mod_src);
     fprintf(file, "[ lv2:symbol \"%clfo_amp_mod_amt\" ; pset:value %.6g ],\n",  lfo_prefix, lfo->amp_mod_amt);
 }
 
 void
 lv2_write_eg(FILE *file, struct peg *eg, int eg_prefix)
 {
-    fprintf(file, "[ lv2:symbol \"eg%c_mode\"           ; pset:value %d ],\n",    eg_prefix, eg->mode);
-    fprintf(file, "[ lv2:symbol \"eg%c_shape_1\"        ; pset:value %d ],\n",    eg_prefix, eg->shape1);
+    fprintf(file, "[ lv2:symbol \"eg%c_mode\"           ; pset:value %d.0 ],\n",  eg_prefix, eg->mode);
+    fprintf(file, "[ lv2:symbol \"eg%c_shape_1\"        ; pset:value %d.0 ],\n",  eg_prefix, eg->shape1);
     fprintf(file, "[ lv2:symbol \"eg%c_time_1\"         ; pset:value %.6g ],\n",  eg_prefix, eg->time1);
     fprintf(file, "[ lv2:symbol \"eg%c_level_1\"        ; pset:value %.6g ],\n",  eg_prefix, eg->level1);
-    fprintf(file, "[ lv2:symbol \"eg%c_shape_2\"        ; pset:value %d ],\n",    eg_prefix, eg->shape2);
+    fprintf(file, "[ lv2:symbol \"eg%c_shape_2\"        ; pset:value %d.0 ],\n",  eg_prefix, eg->shape2);
     fprintf(file, "[ lv2:symbol \"eg%c_time_2\"         ; pset:value %.6g ],\n",  eg_prefix, eg->time2);
     fprintf(file, "[ lv2:symbol \"eg%c_level_2\"        ; pset:value %.6g ],\n",  eg_prefix, eg->level2);
-    fprintf(file, "[ lv2:symbol \"eg%c_shape_3\"        ; pset:value %d ],\n",    eg_prefix, eg->shape3);
+    fprintf(file, "[ lv2:symbol \"eg%c_shape_3\"        ; pset:value %d.0 ],\n",  eg_prefix, eg->shape3);
     fprintf(file, "[ lv2:symbol \"eg%c_time_3\"         ; pset:value %.6g ],\n",  eg_prefix, eg->time3);
     fprintf(file, "[ lv2:symbol \"eg%c_level_3\"        ; pset:value %.6g ],\n",  eg_prefix, eg->level3);
-    fprintf(file, "[ lv2:symbol \"eg%c_shape_4\"        ; pset:value %d ],\n",    eg_prefix, eg->shape4);
+    fprintf(file, "[ lv2:symbol \"eg%c_shape_4\"        ; pset:value %d.0 ],\n",  eg_prefix, eg->shape4);
     fprintf(file, "[ lv2:symbol \"eg%c_time_4\"         ; pset:value %.6g ],\n",  eg_prefix, eg->time4);
     fprintf(file, "[ lv2:symbol \"eg%c_vel_level_sens\" ; pset:value %.6g ],\n",  eg_prefix, eg->vel_level_sens);
     fprintf(file, "[ lv2:symbol \"eg%c_vel_time_scale\" ; pset:value %.6g ],\n",  eg_prefix, eg->vel_time_scale);
     fprintf(file, "[ lv2:symbol \"eg%c_kbd_time_scale\" ; pset:value %.6g ],\n",  eg_prefix, eg->kbd_time_scale);
-    fprintf(file, "[ lv2:symbol \"eg%c_amp_mod_src\"    ; pset:value %d ],\n",    eg_prefix, eg->amp_mod_src);
+    fprintf(file, "[ lv2:symbol \"eg%c_amp_mod_src\"    ; pset:value %d.0 ],\n",  eg_prefix, eg->amp_mod_src);
     fprintf(file, "[ lv2:symbol \"eg%c_amp_mod_amt\"    ; pset:value %.6g ],\n",  eg_prefix, eg->amp_mod_amt);
 }
 
@@ -616,6 +616,10 @@ gui_data_write_patch_as_lv2(FILE *file, y_patch_t *patch, int patch_number)
     fprintf(file, "\" ;\n");
     fprintf(file, "lv2:port\n");
 
+
+    // Ensure all values are saved as floating point (hence the '.0' suffix when saving integer values)
+    // This is required for some hosts to load patches properly.
+
     /* -PORTS- */
     lv2_write_osc(file, &patch->osc1, 1);
     lv2_write_osc(file, &patch->osc2, 2);
@@ -634,7 +638,7 @@ gui_data_write_patch_as_lv2(FILE *file, y_patch_t *patch, int patch_number)
     fprintf(file, "[ lv2:symbol \"filter2_out_pan\"    ; pset:value %.6g ],\n",  patch->vcf2_pan);
 
     fprintf(file, "[ lv2:symbol \"volume\"             ; pset:value %.6g ],\n",  patch->volume );
-    fprintf(file, "[ lv2:symbol \"effect_mode\"        ; pset:value %d ],\n",    patch->effect_mode);
+    fprintf(file, "[ lv2:symbol \"effect_mode\"        ; pset:value %d.0 ],\n",  patch->effect_mode);
     fprintf(file, "[ lv2:symbol \"effect_param_1\"     ; pset:value %.6g ],\n",  patch->effect_param1);
     fprintf(file, "[ lv2:symbol \"effect_param_2\"     ; pset:value %.6g ],\n",  patch->effect_param2);
     fprintf(file, "[ lv2:symbol \"effect_param_3\"     ; pset:value %.6g ],\n",  patch->effect_param3);
@@ -661,7 +665,7 @@ gui_data_write_patch_as_lv2(FILE *file, y_patch_t *patch, int patch_number)
     lv2_write_eg(file, &patch->eg4, '4');
 
     fprintf(file, "[ lv2:symbol \"modmix_bias\"     ; pset:value %.6g ],\n",  patch->modmix_bias);
-    fprintf(file, "[ lv2:symbol \"modmix_mod1_amt\" ; pset:value %d ],\n",    patch->modmix_mod1_src);
+    fprintf(file, "[ lv2:symbol \"modmix_mod1_amt\" ; pset:value %d.0 ],\n",  patch->modmix_mod1_src);
     fprintf(file, "[ lv2:symbol \"modmix_mod1_src\" ; pset:value %.6g ],\n",  patch->modmix_mod1_amt);
     fprintf(file, "[ lv2:symbol \"modmix_mod2_amt\" ; pset:value %d ],\n",    patch->modmix_mod2_src);
     fprintf(file, "[ lv2:symbol \"modmix_mod2_src\" ; pset:value %.6g ].\n\n",patch->modmix_mod2_amt);
@@ -850,7 +854,7 @@ int xi_find_wave(char *name)
         if (!strcmp(wavename, name))
             return i;
     }
-    
+
     fprintf(stderr, "Xsynth-DSSI patch import warning: wave '%s' not found!\n", name);
     return 0; /* punt */
 }
@@ -894,12 +898,12 @@ gui_data_read_xsynth_patch(FILE *file, y_patch_t *patch, int dual)
     strcpy(tmp.comment, "Imported Xsynth-DSSI patch");
 
     while (1) {
-        
+
         if (!fgets(buf, 256, file)) return 0;
 
         /* 'name %20%20<init%20voice>' */
         if (sscanf(buf, " name %90s", buf2) == 1) {
-            
+
             y_data_parse_text(buf2, buf, 30);
             if (dual && strlen(buf) < 27)
                 snprintf(tmp.name, 31, "X2: %s", buf);
@@ -1734,4 +1738,3 @@ gui_data_interpret_k4(const char *filename, int position, int dual, char **messa
     }
     return count;
 }
-
