@@ -349,360 +349,6 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
 }
 
 void
-create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
-{
-    GtkWidget *vbox1;
-    GtkWidget *menubar1;
-    GtkWidget *file1;
-    GtkWidget *file1_menu;
-    GtkWidget *menu_open;
-    GtkWidget *menu_save;
-    GtkWidget *menu_import_xsynth;
-    GtkWidget *menu_import_k4;
-    GtkWidget *separator1;
-    GtkWidget *menu_quit;
-    GtkWidget *edit1;
-    GtkWidget *edit1_menu;
-    GtkWidget *menu_edit;
-    GtkWidget *help1;
-    GtkWidget *help1_menu;
-    GtkWidget *menu_about;
-    GtkWidget *notebook1;
-    GtkWidget *scrolledwindow1;
-    GtkWidget *patches_prog_label;
-    GtkWidget *patches_name_label;
-    GtkWidget *patches_tab_label;
-    GtkWidget *test_note_frame;
-    GtkWidget *test_note_table;
-    GtkWidget *test_note_key_label;
-    GtkWidget *test_note_velocity_label;
-    GtkWidget *test_note_key;
-    GtkWidget *test_note_velocity;
-    GtkWidget *test_note_button;
-    GtkAccelGroup *accel_group;
-    GdkPixbuf *icon;
-
-    /* create combo models */
-    create_edit_combo_models();
-
-    if ((icon = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(),
-                                         "whysynth", 32, 0, NULL)) != NULL) {
-        gtk_window_set_default_icon(icon);
-        g_object_unref(icon);
-    }
-
-    accel_group = gtk_accel_group_new ();
-
-    main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    gtk_object_set_data (GTK_OBJECT (main_window), "main_window", main_window);
-    gtk_window_set_title (GTK_WINDOW (main_window), tag);
-    gtk_widget_realize(main_window);  /* window must be realized for create_*_pixmap() */
-
-  vbox1 = gtk_vbox_new (FALSE, 0);
-  gtk_widget_ref (vbox1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "vbox1", vbox1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (vbox1);
-  gtk_container_add (GTK_CONTAINER (main_window), vbox1);
-
-  menubar1 = gtk_menu_bar_new ();
-  gtk_widget_ref (menubar1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menubar1", menubar1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menubar1);
-  gtk_box_pack_start (GTK_BOX (vbox1), menubar1, FALSE, FALSE, 0);
-
-  file1 = gtk_menu_item_new_with_label ("File");
-  gtk_widget_ref (file1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "file1", file1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (file1);
-  gtk_container_add (GTK_CONTAINER (menubar1), file1);
-
-  file1_menu = gtk_menu_new ();
-  gtk_widget_ref (file1_menu);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "file1_menu", file1_menu,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_menu_item_set_submenu (GTK_MENU_ITEM (file1), file1_menu);
-
-  menu_open = gtk_menu_item_new_with_label ("Open Patch Bank...");
-  gtk_widget_ref (menu_open);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_open", menu_open,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menu_open);
-  gtk_container_add (GTK_CONTAINER (file1_menu), menu_open);
-  gtk_widget_add_accelerator (menu_open, "activate", accel_group,
-                              GDK_O, GDK_CONTROL_MASK,
-                              GTK_ACCEL_VISIBLE);
-
-  menu_save = gtk_menu_item_new_with_label ("Save Patch Bank...");
-  gtk_widget_ref (menu_save);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_save", menu_save,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menu_save);
-  gtk_container_add (GTK_CONTAINER (file1_menu), menu_save);
-  gtk_widget_add_accelerator (menu_save, "activate", accel_group,
-                              GDK_S, GDK_CONTROL_MASK,
-                              GTK_ACCEL_VISIBLE);
-
-  separator1 = gtk_menu_item_new ();
-  gtk_widget_ref (separator1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "separator1", separator1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (separator1);
-  gtk_container_add (GTK_CONTAINER (file1_menu), separator1);
-  gtk_widget_set_sensitive (separator1, FALSE);
-
-  menu_import_xsynth = gtk_menu_item_new_with_label ("Import Xsynth-DSSI Patches...");
-  gtk_widget_ref (menu_import_xsynth);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_import_xsynth", menu_import_xsynth,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menu_import_xsynth);
-  gtk_container_add (GTK_CONTAINER (file1_menu), menu_import_xsynth);
-
-  menu_import_k4 = gtk_menu_item_new_with_label ("(Mis)Interpret K4 Patches...");
-  gtk_widget_ref (menu_import_k4);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_import_k4", menu_import_k4,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menu_import_k4);
-  gtk_container_add (GTK_CONTAINER (file1_menu), menu_import_k4);
-
-  separator1 = gtk_menu_item_new ();
-  gtk_widget_ref (separator1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "separator1", separator1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (separator1);
-  gtk_container_add (GTK_CONTAINER (file1_menu), separator1);
-  gtk_widget_set_sensitive (separator1, FALSE);
-
-  menu_quit = gtk_menu_item_new_with_label ("Quit");
-  gtk_widget_ref (menu_quit);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_quit", menu_quit,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menu_quit);
-  gtk_container_add (GTK_CONTAINER (file1_menu), menu_quit);
-  gtk_widget_add_accelerator (menu_quit, "activate", accel_group,
-                              GDK_Q, GDK_CONTROL_MASK,
-                              GTK_ACCEL_VISIBLE);
-
-  edit1 = gtk_menu_item_new_with_label ("Edit");
-  gtk_widget_ref (edit1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "edit1", edit1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (edit1);
-  gtk_container_add (GTK_CONTAINER (menubar1), edit1);
-  gtk_menu_item_right_justify (GTK_MENU_ITEM (edit1));
-
-  edit1_menu = gtk_menu_new ();
-  gtk_widget_ref (edit1_menu);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "edit1_menu", edit1_menu,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_menu_item_set_submenu (GTK_MENU_ITEM (edit1), edit1_menu);
-
-  menu_edit = gtk_menu_item_new_with_label ("Edit Patch...");
-  gtk_widget_ref (menu_edit);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_edit", menu_edit,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menu_edit);
-  gtk_container_add (GTK_CONTAINER (edit1_menu), menu_edit);
-  gtk_widget_add_accelerator (menu_edit, "activate", accel_group,
-                              GDK_E, GDK_CONTROL_MASK,
-                              GTK_ACCEL_VISIBLE);
-
-  help1 = gtk_menu_item_new_with_label ("About");
-  gtk_widget_ref (help1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "help1", help1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (help1);
-  gtk_container_add (GTK_CONTAINER (menubar1), help1);
-  gtk_menu_item_right_justify (GTK_MENU_ITEM (help1));
-
-  help1_menu = gtk_menu_new ();
-  gtk_widget_ref (help1_menu);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "help1_menu", help1_menu,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_menu_item_set_submenu (GTK_MENU_ITEM (help1), help1_menu);
-
-  menu_about = gtk_menu_item_new_with_label ("About WhySynth");
-  gtk_widget_ref (menu_about);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_about", menu_about,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (menu_about);
-  gtk_container_add (GTK_CONTAINER (help1_menu), menu_about);
-
-  notebook1 = gtk_notebook_new ();
-  gtk_widget_ref (notebook1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "notebook1", notebook1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (notebook1);
-  gtk_box_pack_start (GTK_BOX (vbox1), notebook1, TRUE, TRUE, 0);
-
-  scrolledwindow1 = gtk_scrolled_window_new (NULL, NULL);
-  gtk_widget_ref (scrolledwindow1);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "scrolledwindow1", scrolledwindow1,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (scrolledwindow1);
-  gtk_container_add (GTK_CONTAINER (notebook1), scrolledwindow1);
-  gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolledwindow1), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-  patches_clist = gtk_clist_new (2);
-  gtk_widget_ref (patches_clist);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_clist", patches_clist,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (patches_clist);
-  gtk_container_add (GTK_CONTAINER (scrolledwindow1), patches_clist);
-  gtk_clist_set_column_width (GTK_CLIST (patches_clist), 0, 50);
-  gtk_clist_set_column_width (GTK_CLIST (patches_clist), 1, 80);
-  gtk_clist_column_titles_show (GTK_CLIST (patches_clist));
-
-  patches_prog_label = gtk_label_new ("Prog No");
-  gtk_widget_ref (patches_prog_label);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_prog_label", patches_prog_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (patches_prog_label);
-  gtk_clist_set_column_widget (GTK_CLIST (patches_clist), 0, patches_prog_label);
-
-  patches_name_label = gtk_label_new ("Name");
-  gtk_widget_ref (patches_name_label);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_name_label", patches_name_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (patches_name_label);
-  gtk_clist_set_column_widget (GTK_CLIST (patches_clist), 1, patches_name_label);
-
-  patches_tab_label = gtk_label_new ("Patches");
-  gtk_widget_ref (patches_tab_label);
-  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_tab_label", patches_tab_label,
-                            (GtkDestroyNotify) gtk_widget_unref);
-  gtk_widget_show (patches_tab_label);
-  gtk_notebook_set_tab_label (GTK_NOTEBOOK (notebook1), gtk_notebook_get_nth_page (GTK_NOTEBOOK (notebook1), 0), patches_tab_label);
-
-    /* Configuration tab */
-
-    create_configuration_tab(notebook1, callback_data);
-
-    test_note_frame = gtk_frame_new ("Test Note");
-    gtk_widget_ref (test_note_frame);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_frame", test_note_frame,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (test_note_frame);
-    gtk_container_set_border_width (GTK_CONTAINER (test_note_frame), 5);
-
-    test_note_table = gtk_table_new (3, 3, FALSE);
-    gtk_widget_ref (test_note_table);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "test_note_table", test_note_table,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (test_note_table);
-    gtk_container_add (GTK_CONTAINER (test_note_frame), test_note_table);
-    gtk_container_set_border_width (GTK_CONTAINER (test_note_table), 2);
-    gtk_table_set_row_spacings (GTK_TABLE (test_note_table), 1);
-    gtk_table_set_col_spacings (GTK_TABLE (test_note_table), 5);
-
-    test_note_key_label = gtk_label_new ("key");
-    gtk_widget_ref (test_note_key_label);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_key_label", test_note_key_label,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (test_note_key_label);
-    gtk_table_attach (GTK_TABLE (test_note_table), test_note_key_label, 0, 1, 0, 1,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_misc_set_alignment (GTK_MISC (test_note_key_label), 0, 0.5);
-
-    test_note_velocity_label = gtk_label_new ("velocity");
-    gtk_widget_ref (test_note_velocity_label);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_velocity_label", test_note_velocity_label,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (test_note_velocity_label);
-    gtk_table_attach (GTK_TABLE (test_note_table), test_note_velocity_label, 0, 1, 1, 2,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_misc_set_alignment (GTK_MISC (test_note_velocity_label), 0, 0.5);
-
-    test_note_button = gtk_button_new_with_label ("Send Test Note");
-    gtk_widget_ref (test_note_button);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "main_test_note_button", test_note_button,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (test_note_button);
-    gtk_table_attach (GTK_TABLE (test_note_table), test_note_button, 2, 3, 0, 2,
-                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-                      (GtkAttachOptions) (0), 4, 0);
-
-    main_test_note_key_adj = gtk_adjustment_new (60, 12, 120, 1, 12, 12);
-    test_note_key = gtk_hscale_new (GTK_ADJUSTMENT (main_test_note_key_adj));
-    gtk_widget_ref (test_note_key);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "main_test_note_key", test_note_key,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (test_note_key);
-    gtk_table_attach (GTK_TABLE (test_note_table), test_note_key, 1, 2, 0, 1,
-                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_scale_set_value_pos (GTK_SCALE (test_note_key), GTK_POS_RIGHT);
-    gtk_scale_set_digits (GTK_SCALE (test_note_key), 0);
-    gtk_range_set_update_policy (GTK_RANGE (test_note_key), GTK_UPDATE_DELAYED);
-
-    main_test_note_velocity_adj = gtk_adjustment_new (96, 1, 137, 1, 10, 10);
-    test_note_velocity = gtk_hscale_new (GTK_ADJUSTMENT (main_test_note_velocity_adj));
-    gtk_widget_ref (test_note_velocity);
-    gtk_object_set_data_full (GTK_OBJECT (main_window), "main_test_note_velocity", test_note_velocity,
-                              (GtkDestroyNotify) gtk_widget_unref);
-    gtk_widget_show (test_note_velocity);
-    gtk_table_attach (GTK_TABLE (test_note_table), test_note_velocity, 1, 2, 1, 2,
-                      (GtkAttachOptions) (GTK_FILL),
-                      (GtkAttachOptions) (0), 0, 0);
-    gtk_scale_set_value_pos (GTK_SCALE (test_note_velocity), GTK_POS_RIGHT);
-    gtk_scale_set_digits (GTK_SCALE (test_note_velocity), 0);
-    gtk_range_set_update_policy (GTK_RANGE (test_note_velocity), GTK_UPDATE_DELAYED);
-
-    gtk_box_pack_start (GTK_BOX (vbox1), test_note_frame, FALSE, FALSE, 0);
-
-    gtk_signal_connect(GTK_OBJECT(main_window), "destroy",
-                       GTK_SIGNAL_FUNC(gtk_main_quit), NULL);
-    gtk_signal_connect (GTK_OBJECT (main_window), "delete_event",
-                        (GtkSignalFunc)on_delete_event_wrapper,
-                        (gpointer)on_menu_quit_activate);
-
-    gtk_signal_connect (GTK_OBJECT (menu_open), "activate",
-                        GTK_SIGNAL_FUNC (on_menu_open_activate),
-                        NULL);
-    gtk_signal_connect (GTK_OBJECT (menu_import_xsynth), "activate",
-                        GTK_SIGNAL_FUNC (on_menu_import_activate),
-                        (gpointer)"xsynth");
-    gtk_signal_connect (GTK_OBJECT (menu_import_k4), "activate",
-                        GTK_SIGNAL_FUNC (on_menu_import_activate),
-                        (gpointer)"k4");
-    gtk_signal_connect (GTK_OBJECT (menu_save), "activate",
-                        GTK_SIGNAL_FUNC (on_menu_save_activate),
-                        NULL);
-    gtk_signal_connect (GTK_OBJECT (menu_quit), "activate",
-                        GTK_SIGNAL_FUNC (on_menu_quit_activate),
-                        NULL);
-    gtk_signal_connect (GTK_OBJECT (menu_edit), "activate",
-                        GTK_SIGNAL_FUNC (on_menu_edit_activate),
-                        NULL);
-    gtk_signal_connect (GTK_OBJECT (menu_about), "activate",
-                        GTK_SIGNAL_FUNC (on_menu_about_activate),
-                        NULL);
-    gtk_signal_connect(GTK_OBJECT(patches_clist), "select_row",
-                       GTK_SIGNAL_FUNC(on_patches_selection),
-                       callback_data);
-
-    /* connect test note widgets */
-    gtk_signal_connect (GTK_OBJECT (main_test_note_key_adj),
-                        "value_changed", GTK_SIGNAL_FUNC(on_test_note_slider_change),
-                        (gpointer)0);
-    gtk_signal_connect (GTK_OBJECT (main_test_note_velocity_adj),
-                        "value_changed", GTK_SIGNAL_FUNC(on_test_note_slider_change),
-                        (gpointer)1);
-    gtk_signal_connect (GTK_OBJECT (test_note_button), "pressed",
-                        GTK_SIGNAL_FUNC (on_test_note_button_press),
-                        (gpointer)1);
-    gtk_signal_connect (GTK_OBJECT (test_note_button), "released",
-                        GTK_SIGNAL_FUNC (on_test_note_button_press),
-                        (gpointer)0);
-
-    gtk_window_add_accel_group (GTK_WINDOW (main_window), accel_group);
-}
-
-void
 create_about_window (const char *tag)
 {
     GtkWidget *frame1;
@@ -2971,6 +2617,360 @@ create_edit_save_position_window (const char *tag, struct y_ui_callback_data_t* 
     gtk_signal_connect (GTK_OBJECT (position_cancel), "clicked",
                         (GtkSignalFunc)on_edit_save_position_cancel,
                         NULL);
+}
+
+void
+create_main_window (const char *tag, struct y_ui_callback_data_t* callback_data)
+{
+    GtkWidget *vbox1;
+    GtkWidget *menubar1;
+    GtkWidget *file1;
+    GtkWidget *file1_menu;
+    GtkWidget *menu_open;
+    GtkWidget *menu_save;
+    GtkWidget *menu_import_xsynth;
+    GtkWidget *menu_import_k4;
+    GtkWidget *separator1;
+    GtkWidget *menu_quit;
+    GtkWidget *edit1;
+    GtkWidget *edit1_menu;
+    GtkWidget *menu_edit;
+    GtkWidget *help1;
+    GtkWidget *help1_menu;
+    GtkWidget *menu_about;
+    GtkWidget *notebook1;
+    GtkWidget *scrolledwindow1;
+    GtkWidget *patches_prog_label;
+    GtkWidget *patches_name_label;
+    GtkWidget *patches_tab_label;
+    GtkWidget *test_note_frame;
+    GtkWidget *test_note_table;
+    GtkWidget *test_note_key_label;
+    GtkWidget *test_note_velocity_label;
+    GtkWidget *test_note_key;
+    GtkWidget *test_note_velocity;
+    GtkWidget *test_note_button;
+    GtkAccelGroup *accel_group;
+    GdkPixbuf *icon;
+
+    /* create combo models */
+    create_edit_combo_models();
+
+    if ((icon = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(),
+                                         "whysynth", 32, 0, NULL)) != NULL) {
+        gtk_window_set_default_icon(icon);
+        g_object_unref(icon);
+    }
+
+    accel_group = gtk_accel_group_new ();
+
+    main_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+    gtk_object_set_data (GTK_OBJECT (main_window), "main_window", main_window);
+    gtk_window_set_title (GTK_WINDOW (main_window), tag);
+    gtk_widget_realize(main_window);  /* window must be realized for create_*_pixmap() */
+
+  vbox1 = gtk_vbox_new (FALSE, 0);
+  gtk_widget_ref (vbox1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "vbox1", vbox1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (vbox1);
+  gtk_container_add (GTK_CONTAINER (main_window), vbox1);
+
+  menubar1 = gtk_menu_bar_new ();
+  gtk_widget_ref (menubar1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menubar1", menubar1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menubar1);
+  gtk_box_pack_start (GTK_BOX (vbox1), menubar1, FALSE, FALSE, 0);
+
+  file1 = gtk_menu_item_new_with_label ("File");
+  gtk_widget_ref (file1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "file1", file1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (file1);
+  gtk_container_add (GTK_CONTAINER (menubar1), file1);
+
+  file1_menu = gtk_menu_new ();
+  gtk_widget_ref (file1_menu);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "file1_menu", file1_menu,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (file1), file1_menu);
+
+  menu_open = gtk_menu_item_new_with_label ("Open Patch Bank...");
+  gtk_widget_ref (menu_open);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_open", menu_open,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menu_open);
+  gtk_container_add (GTK_CONTAINER (file1_menu), menu_open);
+  gtk_widget_add_accelerator (menu_open, "activate", accel_group,
+                              GDK_O, GDK_CONTROL_MASK,
+                              GTK_ACCEL_VISIBLE);
+
+  menu_save = gtk_menu_item_new_with_label ("Save Patch Bank...");
+  gtk_widget_ref (menu_save);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_save", menu_save,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menu_save);
+  gtk_container_add (GTK_CONTAINER (file1_menu), menu_save);
+  gtk_widget_add_accelerator (menu_save, "activate", accel_group,
+                              GDK_S, GDK_CONTROL_MASK,
+                              GTK_ACCEL_VISIBLE);
+
+  separator1 = gtk_menu_item_new ();
+  gtk_widget_ref (separator1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "separator1", separator1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (separator1);
+  gtk_container_add (GTK_CONTAINER (file1_menu), separator1);
+  gtk_widget_set_sensitive (separator1, FALSE);
+
+  menu_import_xsynth = gtk_menu_item_new_with_label ("Import Xsynth-DSSI Patches...");
+  gtk_widget_ref (menu_import_xsynth);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_import_xsynth", menu_import_xsynth,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menu_import_xsynth);
+  gtk_container_add (GTK_CONTAINER (file1_menu), menu_import_xsynth);
+
+  menu_import_k4 = gtk_menu_item_new_with_label ("(Mis)Interpret K4 Patches...");
+  gtk_widget_ref (menu_import_k4);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_import_k4", menu_import_k4,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menu_import_k4);
+  gtk_container_add (GTK_CONTAINER (file1_menu), menu_import_k4);
+
+  separator1 = gtk_menu_item_new ();
+  gtk_widget_ref (separator1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "separator1", separator1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (separator1);
+  gtk_container_add (GTK_CONTAINER (file1_menu), separator1);
+  gtk_widget_set_sensitive (separator1, FALSE);
+
+  menu_quit = gtk_menu_item_new_with_label ("Quit");
+  gtk_widget_ref (menu_quit);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_quit", menu_quit,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menu_quit);
+  gtk_container_add (GTK_CONTAINER (file1_menu), menu_quit);
+  gtk_widget_add_accelerator (menu_quit, "activate", accel_group,
+                              GDK_Q, GDK_CONTROL_MASK,
+                              GTK_ACCEL_VISIBLE);
+
+  edit1 = gtk_menu_item_new_with_label ("Edit");
+  gtk_widget_ref (edit1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "edit1", edit1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (edit1);
+  gtk_container_add (GTK_CONTAINER (menubar1), edit1);
+  gtk_menu_item_right_justify (GTK_MENU_ITEM (edit1));
+
+  edit1_menu = gtk_menu_new ();
+  gtk_widget_ref (edit1_menu);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "edit1_menu", edit1_menu,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (edit1), edit1_menu);
+
+  menu_edit = gtk_menu_item_new_with_label ("Edit Patch...");
+  gtk_widget_ref (menu_edit);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_edit", menu_edit,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menu_edit);
+  gtk_container_add (GTK_CONTAINER (edit1_menu), menu_edit);
+  gtk_widget_add_accelerator (menu_edit, "activate", accel_group,
+                              GDK_E, GDK_CONTROL_MASK,
+                              GTK_ACCEL_VISIBLE);
+
+  help1 = gtk_menu_item_new_with_label ("About");
+  gtk_widget_ref (help1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "help1", help1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (help1);
+  gtk_container_add (GTK_CONTAINER (menubar1), help1);
+  gtk_menu_item_right_justify (GTK_MENU_ITEM (help1));
+
+  help1_menu = gtk_menu_new ();
+  gtk_widget_ref (help1_menu);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "help1_menu", help1_menu,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (help1), help1_menu);
+
+  menu_about = gtk_menu_item_new_with_label ("About WhySynth");
+  gtk_widget_ref (menu_about);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "menu_about", menu_about,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (menu_about);
+  gtk_container_add (GTK_CONTAINER (help1_menu), menu_about);
+
+  notebook1 = gtk_notebook_new ();
+  gtk_widget_ref (notebook1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "notebook1", notebook1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (notebook1);
+  gtk_box_pack_start (GTK_BOX (vbox1), notebook1, TRUE, TRUE, 0);
+
+  scrolledwindow1 = gtk_scrolled_window_new (NULL, NULL);
+  gtk_widget_ref (scrolledwindow1);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "scrolledwindow1", scrolledwindow1,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (scrolledwindow1);
+  gtk_container_add (GTK_CONTAINER (notebook1), scrolledwindow1);
+  gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolledwindow1), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
+  patches_clist = gtk_clist_new (2);
+  gtk_widget_ref (patches_clist);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_clist", patches_clist,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (patches_clist);
+  gtk_container_add (GTK_CONTAINER (scrolledwindow1), patches_clist);
+  gtk_clist_set_column_width (GTK_CLIST (patches_clist), 0, 50);
+  gtk_clist_set_column_width (GTK_CLIST (patches_clist), 1, 80);
+  gtk_clist_column_titles_show (GTK_CLIST (patches_clist));
+
+  patches_prog_label = gtk_label_new ("Prog No");
+  gtk_widget_ref (patches_prog_label);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_prog_label", patches_prog_label,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (patches_prog_label);
+  gtk_clist_set_column_widget (GTK_CLIST (patches_clist), 0, patches_prog_label);
+
+  patches_name_label = gtk_label_new ("Name");
+  gtk_widget_ref (patches_name_label);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_name_label", patches_name_label,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (patches_name_label);
+  gtk_clist_set_column_widget (GTK_CLIST (patches_clist), 1, patches_name_label);
+
+  patches_tab_label = gtk_label_new ("Patches");
+  gtk_widget_ref (patches_tab_label);
+  gtk_object_set_data_full (GTK_OBJECT (main_window), "patches_tab_label", patches_tab_label,
+                            (GtkDestroyNotify) gtk_widget_unref);
+  gtk_widget_show (patches_tab_label);
+  gtk_notebook_set_tab_label (GTK_NOTEBOOK (notebook1), gtk_notebook_get_nth_page (GTK_NOTEBOOK (notebook1), 0), patches_tab_label);
+
+    /* Configuration tab */
+
+    create_configuration_tab(notebook1, callback_data);
+
+    test_note_frame = gtk_frame_new ("Test Note");
+    gtk_widget_ref (test_note_frame);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_frame", test_note_frame,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (test_note_frame);
+    gtk_container_set_border_width (GTK_CONTAINER (test_note_frame), 5);
+
+    test_note_table = gtk_table_new (3, 3, FALSE);
+    gtk_widget_ref (test_note_table);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "test_note_table", test_note_table,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (test_note_table);
+    gtk_container_add (GTK_CONTAINER (test_note_frame), test_note_table);
+    gtk_container_set_border_width (GTK_CONTAINER (test_note_table), 2);
+    gtk_table_set_row_spacings (GTK_TABLE (test_note_table), 1);
+    gtk_table_set_col_spacings (GTK_TABLE (test_note_table), 5);
+
+    test_note_key_label = gtk_label_new ("key");
+    gtk_widget_ref (test_note_key_label);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_key_label", test_note_key_label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (test_note_key_label);
+    gtk_table_attach (GTK_TABLE (test_note_table), test_note_key_label, 0, 1, 0, 1,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_misc_set_alignment (GTK_MISC (test_note_key_label), 0, 0.5);
+
+    test_note_velocity_label = gtk_label_new ("velocity");
+    gtk_widget_ref (test_note_velocity_label);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "main test_note_velocity_label", test_note_velocity_label,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (test_note_velocity_label);
+    gtk_table_attach (GTK_TABLE (test_note_table), test_note_velocity_label, 0, 1, 1, 2,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_misc_set_alignment (GTK_MISC (test_note_velocity_label), 0, 0.5);
+
+    test_note_button = gtk_button_new_with_label ("Send Test Note");
+    gtk_widget_ref (test_note_button);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "main_test_note_button", test_note_button,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (test_note_button);
+    gtk_table_attach (GTK_TABLE (test_note_table), test_note_button, 2, 3, 0, 2,
+                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
+                      (GtkAttachOptions) (0), 4, 0);
+
+    main_test_note_key_adj = gtk_adjustment_new (60, 12, 120, 1, 12, 12);
+    test_note_key = gtk_hscale_new (GTK_ADJUSTMENT (main_test_note_key_adj));
+    gtk_widget_ref (test_note_key);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "main_test_note_key", test_note_key,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (test_note_key);
+    gtk_table_attach (GTK_TABLE (test_note_table), test_note_key, 1, 2, 0, 1,
+                      (GtkAttachOptions) (GTK_EXPAND | GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_scale_set_value_pos (GTK_SCALE (test_note_key), GTK_POS_RIGHT);
+    gtk_scale_set_digits (GTK_SCALE (test_note_key), 0);
+    gtk_range_set_update_policy (GTK_RANGE (test_note_key), GTK_UPDATE_DELAYED);
+
+    main_test_note_velocity_adj = gtk_adjustment_new (96, 1, 137, 1, 10, 10);
+    test_note_velocity = gtk_hscale_new (GTK_ADJUSTMENT (main_test_note_velocity_adj));
+    gtk_widget_ref (test_note_velocity);
+    gtk_object_set_data_full (GTK_OBJECT (main_window), "main_test_note_velocity", test_note_velocity,
+                              (GtkDestroyNotify) gtk_widget_unref);
+    gtk_widget_show (test_note_velocity);
+    gtk_table_attach (GTK_TABLE (test_note_table), test_note_velocity, 1, 2, 1, 2,
+                      (GtkAttachOptions) (GTK_FILL),
+                      (GtkAttachOptions) (0), 0, 0);
+    gtk_scale_set_value_pos (GTK_SCALE (test_note_velocity), GTK_POS_RIGHT);
+    gtk_scale_set_digits (GTK_SCALE (test_note_velocity), 0);
+    gtk_range_set_update_policy (GTK_RANGE (test_note_velocity), GTK_UPDATE_DELAYED);
+
+    gtk_box_pack_start (GTK_BOX (vbox1), test_note_frame, FALSE, FALSE, 0);
+
+    gtk_signal_connect(GTK_OBJECT(main_window), "destroy",
+                       GTK_SIGNAL_FUNC(gtk_main_quit), NULL);
+    gtk_signal_connect (GTK_OBJECT (main_window), "delete_event",
+                        (GtkSignalFunc)on_delete_event_wrapper,
+                        (gpointer)on_menu_quit_activate);
+
+    gtk_signal_connect (GTK_OBJECT (menu_open), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_open_activate),
+                        NULL);
+    gtk_signal_connect (GTK_OBJECT (menu_import_xsynth), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_import_activate),
+                        (gpointer)"xsynth");
+    gtk_signal_connect (GTK_OBJECT (menu_import_k4), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_import_activate),
+                        (gpointer)"k4");
+    gtk_signal_connect (GTK_OBJECT (menu_save), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_save_activate),
+                        NULL);
+    gtk_signal_connect (GTK_OBJECT (menu_quit), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_quit_activate),
+                        NULL);
+    gtk_signal_connect (GTK_OBJECT (menu_edit), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_edit_activate),
+                        NULL);
+    gtk_signal_connect (GTK_OBJECT (menu_about), "activate",
+                        GTK_SIGNAL_FUNC (on_menu_about_activate),
+                        NULL);
+    gtk_signal_connect(GTK_OBJECT(patches_clist), "select_row",
+                       GTK_SIGNAL_FUNC(on_patches_selection),
+                       callback_data);
+
+    /* connect test note widgets */
+    gtk_signal_connect (GTK_OBJECT (main_test_note_key_adj),
+                        "value_changed", GTK_SIGNAL_FUNC(on_test_note_slider_change),
+                        (gpointer)0);
+    gtk_signal_connect (GTK_OBJECT (main_test_note_velocity_adj),
+                        "value_changed", GTK_SIGNAL_FUNC(on_test_note_slider_change),
+                        (gpointer)1);
+    gtk_signal_connect (GTK_OBJECT (test_note_button), "pressed",
+                        GTK_SIGNAL_FUNC (on_test_note_button_press),
+                        (gpointer)1);
+    gtk_signal_connect (GTK_OBJECT (test_note_button), "released",
+                        GTK_SIGNAL_FUNC (on_test_note_button_press),
+                        (gpointer)0);
+
+    gtk_window_add_accel_group (GTK_WINDOW (main_window), accel_group);
 }
 
 void
