@@ -88,8 +88,8 @@ GtkWidget *comment_entry;
 
 GtkObject *tuning_adj;
 GtkObject *polyphony_adj;
-GtkWidget *monophonic_option_menu;
-GtkWidget *glide_option_menu;
+GtkComboBox *monophonic_option_menu;
+GtkComboBox *glide_option_menu;
 GtkWidget *program_cancel_button;
 
 GtkTreeStore *combomodel[Y_COMBOMODEL_TYPE_COUNT];
@@ -210,7 +210,7 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
 
 
     GtkTreeStore *monophonic_option_menu_model = combomodel[Y_COMBOMODEL_TYPE_MONOPHONIC_MODE];
-    monophonic_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(monophonic_option_menu_model));
+    monophonic_option_menu = GTK_COMBO_BOX(gtk_combo_box_new_with_model(GTK_TREE_MODEL(monophonic_option_menu_model)));
     gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer, FALSE);
     gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(monophonic_option_menu), combo_renderer,
                                        cmodel_only_leaves_sensitive, NULL, NULL);
@@ -221,11 +221,11 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
     // set the active row to the 'Off' option
     GPtrArray *id_to_path = g_object_get_qdata(G_OBJECT(monophonic_option_menu_model), combomodel_id_to_path_quark);
     GtkTreeIter iter;
-    gtk_tree_model_get_iter_from_string(monophonic_option_menu_model, &iter, g_ptr_array_index(id_to_path, Y_MONO_MODE_OFF));
+    gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(monophonic_option_menu_model), &iter, g_ptr_array_index(id_to_path, Y_MONO_MODE_OFF));
     gtk_combo_box_set_active_iter(monophonic_option_menu, &iter);
 
-    gtk_widget_show (monophonic_option_menu);
-    voice_widgets[Y_PORT_MONOPHONIC_MODE].widget = monophonic_option_menu;
+    gtk_widget_show (GTK_WIDGET(monophonic_option_menu));
+    voice_widgets[Y_PORT_MONOPHONIC_MODE].widget = GTK_WIDGET(monophonic_option_menu);
     if (plugin_mode == Y_DSSI) {
         g_signal_connect(G_OBJECT(monophonic_option_menu), "changed", G_CALLBACK(on_mono_mode_activate), (gpointer)&callback_data[Y_PORT_MONOPHONIC_MODE]);
     } else if (plugin_mode == Y_LV2) {
@@ -233,7 +233,7 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
     }
     gtk_object_set_data_full (GTK_OBJECT (main_window), "monophonic_option_menu", monophonic_option_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
-    gtk_table_attach (GTK_TABLE (configuration_table), monophonic_option_menu, 1, 2, 2, 3,
+    gtk_table_attach (GTK_TABLE (configuration_table), GTK_WIDGET(monophonic_option_menu), 1, 2, 2, 3,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
@@ -249,7 +249,7 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
     gtk_misc_set_alignment (GTK_MISC (glide_mode_label), 0, 0.5);
 
     GtkTreeStore *glide_option_menu_model = combomodel[Y_COMBOMODEL_TYPE_GLIDE_MODE];
-    glide_option_menu = gtk_combo_box_new_with_model(GTK_TREE_MODEL(glide_option_menu_model));
+    glide_option_menu = GTK_COMBO_BOX(gtk_combo_box_new_with_model(GTK_TREE_MODEL(glide_option_menu_model)));
     gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer, FALSE);
     gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(glide_option_menu), combo_renderer,
                                        cmodel_only_leaves_sensitive, NULL, NULL);
@@ -259,11 +259,11 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
 
     // set the active row to the 'Off' option
     id_to_path = g_object_get_qdata(G_OBJECT(glide_option_menu_model), combomodel_id_to_path_quark);
-    gtk_tree_model_get_iter_from_string(glide_option_menu_model, &iter, g_ptr_array_index(id_to_path, Y_GLIDE_MODE_OFF));
+    gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(glide_option_menu_model), &iter, g_ptr_array_index(id_to_path, Y_GLIDE_MODE_OFF));
     gtk_combo_box_set_active_iter(glide_option_menu, &iter);
 
-    gtk_widget_show (glide_option_menu);
-    voice_widgets[Y_PORT_GLIDE_MODE].widget = glide_option_menu;
+    gtk_widget_show(GTK_WIDGET(glide_option_menu));
+    voice_widgets[Y_PORT_GLIDE_MODE].widget = GTK_WIDGET(glide_option_menu);
     if (plugin_mode == Y_DSSI) {
         g_signal_connect(G_OBJECT(glide_option_menu), "changed", G_CALLBACK(on_glide_mode_activate), (gpointer)&callback_data[Y_PORT_GLIDE_MODE]);
     } else if (plugin_mode == Y_LV2) {
@@ -271,7 +271,7 @@ void create_configuration_tab(GtkWidget* notebook, struct y_ui_callback_data_t* 
     }
     gtk_object_set_data_full (GTK_OBJECT (main_window), "glide_option_menu", glide_option_menu,
                               (GtkDestroyNotify) gtk_widget_unref);
-    gtk_table_attach (GTK_TABLE (configuration_table), glide_option_menu, 1, 2, 3, 4,
+    gtk_table_attach (GTK_TABLE (configuration_table), GTK_WIDGET(glide_option_menu), 1, 2, 3, 4,
                       (GtkAttachOptions) (GTK_FILL),
                       (GtkAttachOptions) (0), 0, 0);
 
@@ -1904,8 +1904,6 @@ create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
         initialize_callback_data_and_voice_widgets(callback_data);
         create_edit_combo_models();
     }
-
-    struct voice_widgets* voice_widgets = callback_data[0].voice_widgets;
 
     if (plugin_mode == Y_DSSI)
     {

@@ -79,8 +79,8 @@ extern GtkWidget *comment_entry;
 
 extern GtkObject *tuning_adj;
 extern GtkObject *polyphony_adj;
-extern GtkWidget *monophonic_option_menu;
-extern GtkWidget *glide_option_menu;
+extern GtkComboBox *monophonic_option_menu;
+extern GtkComboBox *glide_option_menu;
 extern GtkWidget *program_cancel_button;
 
 struct voice_widgets {

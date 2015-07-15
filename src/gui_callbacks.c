@@ -1059,7 +1059,6 @@ void
 on_mono_mode_activate(GtkWidget *widget, gpointer data)
 {
     struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
-    GtkComboBox *combo = GTK_COMBO_BOX(callback_data->voice_widgets[Y_PORT_MONOPHONIC_MODE].widget);
 
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(widget));
@@ -1103,7 +1102,6 @@ void
 on_glide_mode_activate(GtkWidget *widget, gpointer data)
 {
     struct y_ui_callback_data_t* callback_data = (struct y_ui_callback_data_t*)data;
-    GtkComboBox *combo = GTK_COMBO_BOX(callback_data->voice_widgets[Y_PORT_GLIDE_MODE].widget);
 
     GtkTreeIter iter;
     GtkTreeModel *model = gtk_combo_box_get_model(GTK_COMBO_BOX(widget));
