@@ -1543,7 +1543,7 @@ create_edit_window (const char *tag, struct y_ui_callback_data_t* callback_data)
 
     // When running as a DSSI plugin, the callback_data variable and combo models
     // are initialized in create_windows() and create_main_window(). Since the LV2
-    //  interface only creates the edit window, we need to perform this initialization
+    // interface only creates the edit window, we need to perform this initialization
     // here.
     if (plugin_mode == Y_LV2)
     {

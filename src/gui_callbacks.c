@@ -1634,6 +1634,19 @@ update_voice_widget(int port, float value, int send_OSC, struct y_ui_callback_da
             cval = 1.0f;
         GDB_MESSAGE(GDB_GUI, " update_voice_widget: change of '%s' to %f => %f\n", ypd->name, value, cval);
         adj = (GtkAdjustment *)callback_data->voice_widgets[port].adjustment;
+
+        // Workaround a bug that occurs when running under Ardour
+        //
+        // Adjusting log scaled controls in WhySynth (like the envelope time
+        // controls) when running under Ardour can trigger a bug, either in
+        // WhySynth or the Ardour GUI. When the knob is close to zero, the GUI
+        // locks up. Attaching a debugger shows the value passed into this
+        // method creeping down very slowly. Performing the following test
+        // catches these very small changes and returns early. Hopefully,
+        // ignoring these very small changes has no side effects.
+        if (abs(adj->value - cval) < 1e-28)
+            return;
+
         adj->value = cval;
         /* emit "value_changed" to get the widget to redraw itself, but don't call
          * on_voice_knob_change(): */
